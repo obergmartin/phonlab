@@ -183,10 +183,10 @@ def sgram(x,fs,chan=0,start=0,end=-1, tf=8000, band='wb',
     im = ax1.imshow(Sxx, aspect='auto', interpolation='nearest', cmap=cmap, vmin = 25, 
                 extent = extent, origin='lower')
     ax1.grid(which='major', axis='y', linestyle=':')  # add grid lines
-    ax1.set(xlabel="Time (sec)", ylabel="Frequency (Hz)")
-    for item in ([ax1.title, ax1.xaxis.label, ax1.yaxis.label] +
-             ax1.get_xticklabels() + ax1.get_yticklabels()):
-        item.set_fontsize(font_size)
+    ax1.set_xlabel("Time (sec)", size=font_size)
+    ax1.set_ylabel("Frequency (Hz)", size=font_size)
+    ax1.tick_params(labelsize=font_size)
+
     plt.subplots_adjust(left=0, bottom=0, right=1, top=1, wspace=0, hspace=0)
    
     if slice_time > 0:  # if spectral slice is desired, plot the spectrum
@@ -196,7 +196,7 @@ def sgram(x,fs,chan=0,start=0,end=-1, tf=8000, band='wb',
         ax2.plot(spectrum,f,color='black') 
         ax2.grid(which='major', axis='y', linestyle=':')  # add grid lines
         ax2.set_ymargin(0)    # put y-axis at bottom and top of axis (as in spectrogram)
-        ax2.tick_params(labelleft=False)  # do not write the frequency axis labels
+        ax2.tick_params(labelleft=False,labelsize=font_size)  # do not write the frequency axis labels
     
     
     if len(save_name)>0:

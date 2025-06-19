@@ -9,6 +9,7 @@ Spectrograms
 Amplitude Contour
 -----------------
 .. autofunction:: phonlab.amplitude_envelope
+.. autofunction:: phonlab.get_rms
 .. autofunction:: phonlab.intensity_to_df
 
 
@@ -21,8 +22,8 @@ Formant Tracking
 
 Pitch Tracking
 --------------
-.. autofunction:: phonlab.get_f0
 .. autofunction:: phonlab.get_f0_acd
+.. autofunction:: phonlab.get_f0_sift
 .. autofunction:: phonlab.get_f0_srh
 .. autofunction:: phonlab.pitch_to_df
 

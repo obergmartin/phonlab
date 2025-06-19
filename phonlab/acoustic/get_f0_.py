@@ -1,16 +1,55 @@
-__all__=['get_f0','get_f0_srh','get_f0_cor', 'get_f0_acd']
+__all__=['get_rms','get_f0_sift','get_f0_srh','get_f0_ac','get_f0_acd']
 
 import numpy as np
-from scipy.signal import windows, find_peaks, spectrogram, peak_prominences
+from scipy.signal import windows, find_peaks, spectrogram, peak_prominences, fftconvolve
 from scipy import fft
 from librosa import feature, util, lpc
 from pandas import DataFrame
 from ..utils.prep_audio_ import prep_audio
-  
-def get_f0(y, fs, f0_range = [63,400], pre = 1.0):
+
+
+def get_rms(y, fs, scale=False):
+    """Measure the time-varying root mean square (RMS) amplitude of the signal in **y**.
+
+    Parameters
+    ==========
+        y : ndarray
+            A one-dimensional array of audio samples
+        fs : int
+            Sampling rate of **x**, if it is an array.
+        scale : boolean, default = False
+            optionally scale the rms amplitude to maximum peak.
+
+    Returns
+    =======
+        df: pandas DataFrame
+            There are two columns in the returned frame - sec, rms.
+
+    """
+
+    # constants and global variables
+    frame_length_sec = 0.04
+    step_sec = 0.005
+
+    frame_length = int(fs * frame_length_sec) 
+    half_frame = frame_length//2
+    step = int(fs * step_sec)  # number of samples between frames
+
+    rms = feature.rms(y=y,frame_length=frame_length, hop_length=step,center=False)
+    if scale:
+        rms = 20*np.log10(rms[0]/np.max(rms[0]))
+    else:
+        rms = 20*np.log10(rms[0])
+
+    nb = rms.shape[0]  # the number of frames
+    sec = (np.array(range(nb)) * step + half_frame).astype(int)/fs
+
+    return DataFrame({'sec': sec, 'rms':rms})
+
+def get_f0_sift(y, fs, f0_range = [63,400], pre = 0.94):
     """Track the fundamental frequency of voicing (f0)
 
-    The method in this function mirrors that used in track_formants().  LPC coefficients are calculated for each frame and the audio signal is inverse filtered with these, resulting in a quasi glottal waveform. Then autocorrelation is used to estimate the fundamental frequency.  Probability of voicing is given from a logistic regression formula using `rms` and `c` trained to predict the voicing state as determined by EGG data using the function `phonlab.egg2oq()` over the 10 speakers in the ASC corpus of Mandarin speech. The log odds of voicing in that training data was given by `odds = -4.31 + 0.17*rms + 13.29*c`, and probability of voicing is thus:  `probv = odds / (1 + odds)`.
+    The method in this function is an implementation of John Markel's (1972) simplified inverse filter tracking algorithm (SIFT) which is also used in track_formants().  LPC coefficients are calculated for each frame and the audio signal is inverse filtered with these, resulting in a quasi glottal waveform. Then autocorrelation is used to estimate the fundamental frequency.  Probability of voicing is given from a logistic regression formula using `rms` and `c` trained to predict the voicing state as determined by EGG data using the function `phonlab.egg2oq()` over the 10 speakers in the ASC corpus of Mandarin speech. The log odds of voicing in that training data was given by `odds = -4.31 + 0.17*rms + 13.29*c`, and probability of voicing is thus:  `probv = odds / (1 + odds)`.
 
     Parameters
     ==========
@@ -23,7 +62,8 @@ def get_f0(y, fs, f0_range = [63,400], pre = 1.0):
 
     Returns
     =======
-        df - a pandas dataframe  measurements at 0.01 sec intervals.
+        df: pandas DataFrame  
+            measurements at 5 msec intervals.
 
     Note
     ====
@@ -34,6 +74,10 @@ def get_f0(y, fs, f0_range = [63,400], pre = 1.0):
         * c - value of the peak autocorrelation found in the frame
         * probv - estimated probability of voicing
         * voiced - a boolean, true if probv>0.5
+
+    References
+    ==========
+    Markel, J. (1972) The SIFT algorithm for fundamental frequency estimation. `IEEE Transactions on Audio and Electroacoustics`, 20(5), 367 - 377
 
     Example
     =======
@@ -57,17 +101,17 @@ def get_f0(y, fs, f0_range = [63,400], pre = 1.0):
 
    """
     # constants and global variables
-    frame_length_sec = 0.075
-    step_sec = 0.01
+    frame_length_sec = 0.04
+    step_sec = 0.005
     
-    x, fs = prep_audio(y, fs, target_fs=12000, pre = 0, quiet=True)  # read waveform, no preemphasis, for RMS calc
+    x, fs = prep_audio(y, fs, target_fs=16000, pre = 0, quiet=True)  # no preemphasis, for RMS calc
 
     frame_length = int(fs * frame_length_sec) 
     half_frame = frame_length//2
     step = int(fs * step_sec)  # number of samples between frames
 
-    rms = feature.rms(y=x,frame_length=frame_length, hop_length=step)[0,1:-1] # get rms amplitude
-    rms = 20*np.log10(rms/np.max(rms))
+    rms = feature.rms(y=x,frame_length=frame_length, hop_length=step,center=False)
+    rms = 20*np.log10(rms[0]/np.max(rms[0]))
 
     if (pre > 0): x = np.append(x[0], x[1:] - pre * x[:-1])  # now apply pre-emphasis
 
@@ -76,19 +120,18 @@ def get_f0(y, fs, f0_range = [63,400], pre = 1.0):
     frames = np.multiply(frames,w)   # apply a Hamming window to each frame, for lpc
 
     nb = frames.shape[0]  # the number of frames (or blocks) in the LPC analysis
-    
-    sec = np.array([(i * (step/fs)+(frame_length_sec/2)) for i in range(nb)])  
-    A = lpc(frames, order=14,axis=-1)  # get LPC coefs, can use a largish order
-    
     f0 = np.empty(nb)
     c = np.empty((nb))
+
+    sec = np.array([(i * (step/fs)+(frame_length_sec/2)) for i in range(nb)])  
+    A = lpc(frames, order=32,axis=-1)  # get LPC coefs, can use a largish order
+    xi = fftconvolve(frames,A,mode="same",axes=1) # inverse filter
 
     th = fs//f0_range[1]
     tl = fs//f0_range[0]
     
     for i in range(nb): 
-        xi = np.convolve(frames[i],A[i,:])  #inverse filter with lpc coeffs
-        cormat = np.correlate(xi, xi, mode='full') # autocorrelation 
+        cormat = np.correlate(xi[i], xi[i], mode='full') # autocorrelation 
         ac = cormat[cormat.size//2:] # the autocorrelation is in the last half of the result
         idx = np.argmax(ac[th:tl]) + th # index of peak correlation (in range lowest to highest)
         f0[i] = 1/(idx/fs)      # converted to Hz
@@ -98,77 +141,82 @@ def get_f0(y, fs, f0_range = [63,400], pre = 1.0):
     probv = odds / (1 + odds)
     voiced = probv > 0.5
 
-    return DataFrame({'sec': sec[:nb], 'f0':f0[:nb], 'rms':rms[:nb], 'c':c[:nb],
-                    'probv': probv[:nb], 'voiced':voiced[:nb]})
+    return DataFrame({'sec': sec, 'f0':f0, 'rms':rms, 'c':c, 'probv': probv, 'voiced':voiced})
+    
 
-
-
-def get_f0_srh(y, fs, f0_range = [60,400], pre = 0.94):
+def get_f0_srh(y, fs, f0_range = [60,400]):
     """Track the fundamental frequency of voicing (f0)
 
-    This function is an implementation of Drugman and Alwan's (2011) "Summation of Residual Harmonics" (SRH) method of pitch tracking.  The signal is inverse filtered with LPC analysis, and then harmonics are found in the spectrum of the residual signal.
+This function is an implementation of Drugman and Alwan's (2011) "Summation of 
+Residual Harmonics" (SRH) method of pitch tracking.  The signal is downsampled to 
+10 kHz, and inverse filtered with LPC analysis to remove the influence of vowel 
+formants. Then harmonics are found in the spectrum of the residual signal.
+Drugman and Alwan found that this technique provides an estimate of F0 that is 
+robust when the audio signal is corrupted by noise.
 
-    Parameters
-    ==========
-        y : string or ndarray
-            A one-dimensional array of audio samples
-        fs : int
-            Sampling rate of **x**, if it is an array.
-        f0_range : list of two integers, default = [63,400]
-            The lowest and highest values to consider in pitch tracking.
+Parameters
+==========
+    y : string or ndarray
+        A one-dimensional array of audio samples
+    fs : int
+        Sampling rate of **x**, if it is an array.
+    f0_range : list of two integers, default = [63,400]
+        The lowest and highest values to consider in pitch tracking. This algorithm is quite sensitive to the values given in this setting.
 
-    Returns
-    =======
-        df - a pandas dataframe  measurements at 0.01 sec intervals.
+Returns
+=======
+    df : pandas DataFrame  
+        measurements at 5 msec intervals.
 
-    Note
-    ====
-    The columns in the returned dataframe are for each frame of audio:
-        * sec - time at the midpoint of each frame
-        * f0 - estimate of the fundamental frequency
-        * rms - estimate of the rms amplitude found with `librosa.feature.rms()`
-        * c - value of SRH
-        * probv - estimated probability of voicing
-        * voiced - a boolean, true if probv>0.5
+Note
+====
+The columns in the returned dataframe are for each frame of audio:
+    * sec - time at the midpoint of each frame
+    * f0 - estimate of the fundamental frequency
+    * rms - rms amplitude, bandlimited to 5 kHz
+    * srh - value of SRH (normalized sum of the residual harmonics)
+    * probv - estimated probability of voicing
+    * voiced - a boolean, true if probv>0.5
 
-    References
-    ==========
+References
+==========
 
-    Drugman, Thomas & Alwan, Abeer (2011) Joint robust voicing detection and pitch estimation based on residual harmonics. ISCA (Florence, Italy) pp. 1973ff
+Drugman, Thomas & Alwan, Abeer (2011) Joint robust voicing detection 
+and pitch estimation based on residual harmonics. ISCA (Florence, Italy) pp. 1973ff
+
     
     """
-    frame_length_sec = 0.1
-    step_sec = 0.01
+    frame_length_sec = 0.04
+    step_sec = 0.005
+    fs_khz = 10
     
-    x, fs = prep_audio(y, fs, target_fs=12000, pre = 0, quiet=True)  # downsample the waveform, no preemphasis
-
+    x, fs = prep_audio(y, fs, target_fs=fs_khz*1000, pre = 0.96, quiet=True)  
     frame_length = int(fs * frame_length_sec) 
     half_frame = frame_length//2
     step = int(fs * step_sec)  # number of samples between frames
 
-    rms = feature.rms(y=x,frame_length=frame_length, hop_length=step)[0,1:-1] # get rms amplitude
-    rms = 20*np.log10(rms/np.max(rms))
-
-    if (pre > 0): x = np.append(x[0], x[1:] - pre * x[:-1])  # now apply pre-emphasis
+    rms = feature.rms(y=x,frame_length=frame_length, hop_length=step,center=False)
+    rms = 20*np.log10(rms[0]/np.max(rms[0]))
 
     w = windows.hamming(frame_length)
     frames = util.frame(x, frame_length=frame_length, hop_length=step,axis=0)    
     frames = np.multiply(frames,w)   # apply a Hamming window to each frame, for lpc
 
     nb = frames.shape[0]  # the number of frames (or blocks) in the LPC analysis
-    
-    sec = np.array([(i * (step/fs)+(frame_length_sec/2)) for i in range(nb)])  
-    A = lpc(frames, order=14,axis=-1)  
-    
+    sec = (np.array(range(nb)) * step + half_frame).astype(int)/fs
+
+    A = lpc(frames, order=int(fs_khz*2+2))  # get lpc coefficients
+    filtered_frames = fftconvolve(frames,A,mode="same",axes=1) # inverse filter
+    Sxx = np.abs(np.fft.rfft(filtered_frames,2**14))           # spectrum of inverse
+                     
     f0 = np.empty(nb)
     c = np.empty((nb))
 
     for i in range(nb): 
-        xi = np.convolve(frames[i],A[i,:])  #inverse filter with lpc coeffs
-        S = np.abs(np.fft.rfft(xi,2**16)) # compute the power spectrum
+        S = Sxx[i]
         T = len(S)/fs
         srh_max = 0
-        max_harmonic = 7
+        max_harmonic = 6
         for f in range(f0_range[0], f0_range[1]): 
             fT = int(f*T)  # test this as frequency of H1
             h = S[fT]
@@ -184,32 +232,30 @@ def get_f0_srh(y, fs, f0_range = [60,400], pre = 0.94):
     probv = odds / (1 + odds)
     voiced = probv > 0.5
 
-    return DataFrame({'sec': sec[:nb], 'f0':f0[:nb], 'rms':rms[:nb], 'c':c[:nb],
-                    'probv': probv[:nb], 'voiced':voiced[:nb]})
+    return DataFrame({'sec': sec, 'f0':f0, 'rms':rms, 'srh':c, 'probv': probv, 'voiced':voiced})
 
-
-def get_f0_cor(y, fs, f0_range = [60,400]):
+def get_f0_ac(y, fs, f0_range = [60,400]):
 
     # constants and global variables
     frame_length_sec = 1/f0_range[0]
     step_sec = 0.005
 
-    # read waveform, no preemphasis, up-sample
-    x, fs = prep_audio(y, fs, target_fs = 48000, pre = 0, quiet=True)  
+    # no preemphasis, up-sample
+    x, fs = prep_audio(y, fs, target_fs = 24000, pre = 0, quiet=True)  
 
     frame_length = int(fs * frame_length_sec) 
     half_frame = frame_length//2
     step = int(fs * step_sec)  # number of samples between frames
 
-    rms = feature.rms(y=x,frame_length=frame_length, hop_length=step)[0,0:-1] # get rms amplitude
-    rms = 20*np.log10(rms/np.max(rms))
+    rms = feature.rms(y=x,frame_length=frame_length, hop_length=step,center=False)
+    rms = 20*np.log10(rms[0]/np.max(rms[0]))
 
     frames = util.frame(x, frame_length=frame_length, hop_length=step,axis=0)    
 
     nb = frames.shape[0]  # the number of frames (or blocks) in the LPC analysis
-    
-    sec = np.array([(i * (step/fs)+(frame_length_sec/2)) for i in range(nb)])  
-    
+
+    sec = (np.array(range(nb)) * step + half_frame).astype(int)/fs
+
     f0 = np.empty(nb)
     c = np.empty((nb))
 
@@ -227,8 +273,7 @@ def get_f0_cor(y, fs, f0_range = [60,400]):
     probv = odds / (1 + odds)
     voiced = probv > 0.5
 
-    return DataFrame({'sec': sec[:nb], 'f0':f0[:nb], 'rms':rms[:nb], 'c':c[:nb],
-                    'probv': probv[:nb], 'voiced':voiced[:nb]})
+    return DataFrame({'sec': sec, 'f0':f0, 'rms':rms, 'c':c, 'probv': probv, 'voiced':voiced})
 
 def f0_from_harmonics(f_p,i,h,nh):  
     ''' Assign harmonic numbers to the peaks in f_p -- this function is used in get_f0_acd
@@ -268,66 +313,67 @@ def f0_from_harmonics(f_p,i,h,nh):
 def get_f0_acd(y, fs, prom=14, f0_range=[60,400], min_height = 0.6, test_time=-1):
     """Track the fundamental frequency of voicing (f0) from harmonics in the short time spectrum
 
-    This function implements the 'approximate common denominator" algorithm proposed by Aliik, Mihkla and Ross (1984), which was an improvement on the method proposed by Duifuis, Willems and Sluyter (1982).  The algorithm finds candidate harmonic peaks in the spectrum, and chooses a value of f0 that best predicts the harmonic pattern.  One feature of this method is that it reports a voice quality measure (the difference in the amplitudes of harmonic 1 and harmonic 2).
+This function implements the 'approximate common denominator" algorithm proposed by Aliik, Mihkla and Ross (1984), which was an improvement on the method proposed by Duifuis, Willems and Sluyter (1982).  The algorithm finds candidate harmonic peaks in the spectrum, and chooses a value of f0 that best predicts the harmonic pattern.  One feature of this method is that it reports a voice quality measure (the difference in the amplitudes of harmonic 1 and harmonic 2).
 
-    Parameters
-    ==========
-        y : ndarray
-            A one-dimensional array of audio samples
-        fs : int
-            the sampling rateof the audio in **y**.
-        prom : numeric, default = 14 dB
-            In deciding whether a peak in the spectrum is a possible harmonic, this prominence value is passed to scipy.find_peaks().  A larger value means that the spectral peak must be more prominent to be considered as a possible harmonic peak, and thus the algorithm is less likely to report pitch values when the parameter is given a high value.  In general, 20 is a high value, and 3 is low.
-        f0_range : a list of two integers, default=[60,400]
-            The lowest and highest values to consider in pitch tracking. The algorithm is not particularly sensitive to this parameter, but it can be useful in avoiding pitch-halving or pitch-doubling.
-        min_height: numeric, default = 0.6
-            As a proportion of the range between the lowest amplitude in the spectrum and the highest, only peaks above `min_height` will be considered to be harmonics. The value that is passed to find_peaks() is: `amplitude_min + min_height*(amplitude_range)`. 
+Parameters
+==========
+    y : ndarray
+        A one-dimensional array of audio samples
+    fs : int
+        the sampling rateof the audio in **y**.
+    prom : numeric, default = 14 dB
+        In deciding whether a peak in the spectrum is a possible harmonic, this prominence value is passed to scipy.find_peaks().  A larger value means that the spectral peak must be more prominent to be considered as a possible harmonic peak, and thus the algorithm is less likely to report pitch values when the parameter is given a high value.  In general, 20 is a high value, and 3 is low.
+    f0_range : a list of two integers, default=[60,400]
+        The lowest and highest values to consider in pitch tracking. The algorithm is not particularly sensitive to this parameter, but it can be useful in avoiding pitch-halving or pitch-doubling.
+    min_height: numeric, default = 0.6
+        As a proportion of the range between the lowest amplitude in the spectrum and the highest, only peaks above `min_height` will be considered to be harmonics. The value that is passed to find_peaks() is: `amplitude_min + min_height*(amplitude_range)`. 
 
-    Returns
-    =======
-        df - a pandas dataframe  measurements at 5 msec intervals.
+Returns
+=======
+    df: pandas DataFrame  
+        measurements at 5 msec intervals.
 
-    Note
-    ====
+Note
+====
     The columns in the returned dataframe are for each frame of audio:
         * sec - time at the midpoint of each frame
         * f0 - estimate of the fundamental frequency
-        * rms - estimate of the rms amplitude in the downsampled spectrum (0-2400 Hz by default)
+        * rms - estimate of the rms amplitude, bandlimited to 2400 Hz
         * h1h2 - the difference in the amplitudes of the first two harmonics (H1 - H2) in dB
 
-    Example
-    =======
+Example
+=======
 
-    .. code-block:: Python
+.. code-block:: Python
     
-        example_file = importlib.resources.files('phonlab') / 'data' / 'example_audio' / 'stereo.wav'
+    example_file = importlib.resources.files('phonlab') / 'data' / 'example_audio' / 'stereo.wav'
 
-        x,fs = phon.loadsig(example_file, chansel=[0])
-        f0df = phon.get_f0_acd(x,fs,prom=18)
+    x,fs = phon.loadsig(example_file, chansel=[0])
+    f0df = phon.get_f0_acd(x,fs,prom=18)
 
-        snd = parselmouth.Sound(str(example_file)).extract_left_channel()  # create a Praat Sound object
-        pitch = snd.to_pitch()  # create a Praat pitch object
-        f0df2 = phon.pitch_to_df(pitch)  # convert it into a Pandas dataframe
+    snd = parselmouth.Sound(str(example_file)).extract_left_channel()  # create a Praat Sound object
+    pitch = snd.to_pitch()  # create a Praat pitch object
+    f0df2 = phon.pitch_to_df(pitch)  # convert it into a Pandas dataframe
 
-        ret = phon.sgram(x,fs,cmap='Grays') # draw a spectrogram of the sound
+    ret = phon.sgram(x,fs,cmap='Grays') # draw a spectrogram of the sound
 
-        f0_range = [60,400]
+    f0_range = [60,400]
 
-        ax1 = ret[0]  # get the plot axis
-        ax2 = ax1.twinx()  # and twin it for plotting f0
-        ax2.plot(f0df2.sec,f0df2.f0, color='chartreuse',marker="s",linestyle = "none")
-        ax2.plot(f0df.sec,f0df.f0, color='dodgerblue',marker="d",linestyle = "none")  
-        ax2.set_ylim(f0_range)
-        ax2.set_ylabel("F0 (Hz)", size=14)
-        for item in ax2.get_yticklabels(): item.set_fontsize(14)
+    ax1 = ret[0]  # get the plot axis
+    ax2 = ax1.twinx()  # and twin it for plotting f0
+    ax2.plot(f0df2.sec,f0df2.f0, color='chartreuse',marker="s",linestyle = "none")
+    ax2.plot(f0df.sec,f0df.f0, color='dodgerblue',marker="d",linestyle = "none")  
+    ax2.set_ylim(f0_range)
+    ax2.set_ylabel("F0 (Hz)", size=14)
+    for item in ax2.get_yticklabels(): item.set_fontsize(14)
 
-    .. figure:: images/acd_pitch_trace.png
-       :scale: 33 %
-       :alt: a spectrogram with a pitch trace calculated by get_f0_acd
-       :align: center
+.. figure:: images/acd_pitch_trace.png
+    :scale: 33 %
+    :alt: a spectrogram with a pitch trace calculated by get_f0_acd
+    :align: center
 
-       Comparing the f0 found by `phon.get_f0_acd()` plotted with blue diamonds, and the f0 
-       values found by `parselmouth` `to_Pitch()`, plotted with chartreuse dots.
+    Comparing the f0 found by `phon.get_f0_acd()` plotted with blue diamonds, and the f0 
+    values found by `parselmouth` `to_Pitch()`, plotted with chartreuse dots.
 
     """
     nh = 6  # maximum number of harmonics to consider
@@ -401,5 +447,5 @@ def get_f0_acd(y, fs, prom=14, f0_range=[60,400], min_height = 0.6, test_time=-1
             print(f"height = {height:0.2f},max={np.max(spec):0.2f}, min={np.min(spec):0.2f}, c={best_c}")
             print(f"time = {test_time}, f0 = {f0[idx]:0.2f}, h1h2 = {h1h2[idx]:0.2f}")
 
-    return DataFrame({'sec': ts, 'f0':f0, 'rms':rms[:nb], 'h1h2':h1h2})
+    return DataFrame({'sec': ts, 'f0':f0, 'rms':rms, 'h1h2':h1h2})
 #----------------------
