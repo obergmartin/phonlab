@@ -56,7 +56,7 @@ In this example we open a sound file with `get_signal()` and then search for the
      ax1.axvline(b_time,color="red")
 
 .. figure:: images/burst.png
-   :scale: 100 %
+   :scale: 40 %
    :alt: a spectrogram with a red line marking the location of the burst
    :align: center
 
