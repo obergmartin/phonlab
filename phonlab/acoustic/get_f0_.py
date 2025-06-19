@@ -250,8 +250,6 @@ def f0_from_harmonics(f_p,i,h,nh):
         best_f0 = np.nan
         for k in range(h+1,nh+1):  # step through harmonics
             test_f0 = f_p[j]/k
-            mean_f0 = np.mean(f0)
-            #mean_f0 = np.average(f0,weights=np.arange(len(f0))+1)
             deviation = abs(test_f0 - f0[0])
             if deviation < lowest_deviation: # pick the best harmonic number for this peak
                 lowest_deviation = deviation
@@ -268,31 +266,26 @@ def f0_from_harmonics(f_p,i,h,nh):
     return C,mean_f0 
     
 def get_f0_acd(y, fs, prom=14, f0_range=[60,400], min_height = 0.6, test_time=-1):
-    """Track the fundamental frequency of voicing (f0)
+    """Track the fundamental frequency of voicing (f0) from harmonics in the short time spectrum
 
-    The method in this function implements the 'approximate common denominator" algorithm proposed by 
-    Aliik, Mihkla and Ross (1984), which was an improvement on the method proposed by Duifuis, 
-    Willems and Sluyter (1982).  The method finds candidate harmonic peaks in the spectrum, and chooses 
-    a value of f0 that will give the best fitting harmonic pattern.
+    This function implements the 'approximate common denominator" algorithm proposed by Aliik, Mihkla and Ross (1984), which was an improvement on the method proposed by Duifuis, Willems and Sluyter (1982).  The algorithm finds candidate harmonic peaks in the spectrum, and chooses a value of f0 that best predicts the harmonic pattern.  One feature of this method is that it reports a voice quality measure (the difference in the amplitudes of harmonic 1 and harmonic 2).
 
     Parameters
     ==========
         y : ndarray
             A one-dimensional array of audio samples
         fs : int
-            the sampling rateof the audio in **x**.
+            the sampling rateof the audio in **y**.
         prom : numeric, default = 14 dB
             In deciding whether a peak in the spectrum is a possible harmonic, this prominence value is passed to scipy.find_peaks().  A larger value means that the spectral peak must be more prominent to be considered as a possible harmonic peak, and thus the algorithm is less likely to report pitch values when the parameter is given a high value.  In general, 20 is a high value, and 3 is low.
         f0_range : a list of two integers, default=[60,400]
-            The lowest and highest values to consider in pitch tracking (e.g. [60,400]. The algorithm is not particularly sensitive to this parameter, but it can be useful in avoiding pitch-halving or pitch-doubling.
+            The lowest and highest values to consider in pitch tracking. The algorithm is not particularly sensitive to this parameter, but it can be useful in avoiding pitch-halving or pitch-doubling.
         min_height: numeric, default = 0.6
-            As a proportion of the range between the lowest amplitude in the spectrum and the highest, only 
-            peaks above `min_height` will be considered to be harmonics. The value that is passed to 
-            find_peaks() is: `amplitude_min + min_height*(amplitude_range)`. 
+            As a proportion of the range between the lowest amplitude in the spectrum and the highest, only peaks above `min_height` will be considered to be harmonics. The value that is passed to find_peaks() is: `amplitude_min + min_height*(amplitude_range)`. 
 
     Returns
     =======
-        df - a pandas dataframe  measurements at 0.01 sec intervals.
+        df - a pandas dataframe  measurements at 5 msec intervals.
 
     Note
     ====
@@ -307,21 +300,34 @@ def get_f0_acd(y, fs, prom=14, f0_range=[60,400], min_height = 0.6, test_time=-1
 
     .. code-block:: Python
     
-         y,fs = phon.loadsig("sf3_cln.wav",chansel=[0])
-         f0df = get_f0_acd(y,fs)
-        
-         ret = phon.sgram(y, fs, cmap='Blues') # draw the spectrogram from the array of samples
-         ax1 = ret[0]  # the first item returned is the matplotlib axes of the spectrogram
-         ax2 = ax1.twinx()
-         ax2.plot(f0df.sec,f0df.f0, 'go')  
+        example_file = importlib.resources.files('phonlab') / 'data' / 'example_audio' / 'stereo.wav'
+
+        x,fs = phon.loadsig(example_file, chansel=[0])
+        f0df = phon.get_f0_acd(x,fs,prom=18)
+
+        snd = parselmouth.Sound(str(example_file)).extract_left_channel()  # create a Praat Sound object
+        pitch = snd.to_pitch()  # create a Praat pitch object
+        f0df2 = phon.pitch_to_df(pitch)  # convert it into a Pandas dataframe
+
+        ret = phon.sgram(x,fs,cmap='Grays') # draw a spectrogram of the sound
+
+        f0_range = [60,400]
+
+        ax1 = ret[0]  # get the plot axis
+        ax2 = ax1.twinx()  # and twin it for plotting f0
+        ax2.plot(f0df2.sec,f0df2.f0, color='chartreuse',marker="s",linestyle = "none")
+        ax2.plot(f0df.sec,f0df.f0, color='dodgerblue',marker="d",linestyle = "none")  
+        ax2.set_ylim(f0_range)
+        ax2.set_ylabel("F0 (Hz)", size=14)
+        for item in ax2.get_yticklabels(): item.set_fontsize(14)
 
     .. figure:: images/acd_pitch_trace.png
-       :scale: 50 %
-       :alt: a 'bluescale' spectrogram with a pitch trace calculated by get_f0_acd
+       :scale: 33 %
+       :alt: a spectrogram with a pitch trace calculated by get_f0_acd
        :align: center
 
-       Comparing the f0 found by `phon.get_f0_acd()` plotted with black dots, and the f0 
-       values found by `parselmouth` `to_Pitch()`, plotted with magenta dots.
+       Comparing the f0 found by `phon.get_f0_acd()` plotted with blue diamonds, and the f0 
+       values found by `parselmouth` `to_Pitch()`, plotted with chartreuse dots.
 
     """
     nh = 6  # maximum number of harmonics to consider
@@ -344,13 +350,13 @@ def get_f0_acd(y, fs, prom=14, f0_range=[60,400], min_height = 0.6, test_time=-1
 
     nb = len(ts)  # the number of frames in the spectrogram
     f0 = np.full(nb,np.nan)  # array filled with nan
-    h1h2 = np.full(nb,np.nan)        # array filled with 5
+    h1h2 = np.full(nb,np.nan)        # array filled with nan
         
     min_dist = int(f0_range[0]/(fs/N)) # min distance btw harmonics
     max_dist = int(f0_range[1]/(fs/N))
     dist = int((min_dist + max_dist)/2)
 
-    ## temp
+    ## temp 
     if test_time>0:
         i_test = np.argmin(np.fabs(test_time-ts)) # the ts that is closest to this
     else: 
@@ -359,31 +365,31 @@ def get_f0_acd(y, fs, prom=14, f0_range=[60,400], min_height = 0.6, test_time=-1
     
     for idx in range(nb):
         spec = Sxx[:,idx]
-         
         height = np.min(spec) + min_height * np.abs(np.max(spec)-np.min(spec))  # required height of a peak
-        
         peaks,props = find_peaks(spec, height = height, prominence=prom, distance = min_dist, wlen=dist)
 
-        n=nh  # highest harmonic number
-        if len(peaks)<n: n = len(peaks)
-
         best_c = 5
-        peak_diff = np.median(np.ediff1d(f[peaks[0:n]]))  # median difference between adjacent peaks       
         if len(peaks)>2:  # we did find some harmonics?
             for p in range(3):  # for each of the first three spectral peaks
                 for h in range(1,5): # treat it as one of the first four harmonics
                     if (h==p*2): break
                     C,_f0 = f0_from_harmonics(f[peaks],p,h,nh)
-                    if idx==i_test: print(f'_f0: {_f0:0.1f}, peak: {p}, harmonic: {h}, C: {C:0.2f}')
-                    if (C < 3.5)  & (f0_range[0] < _f0) & (_f0 < f0_range[1]) & (C<best_c):
+                    
+                    if idx==i_test: 
+                        print(f'_f0: {_f0:0.1f}, peak: {p}, harmonic: {h}, C: {C:0.2f}')
+                        
+                    if (C < 3.5)  & (f0_range[0] < _f0) & (_f0 < f0_range[1]) & (C < best_c):
                         best_c = C      
-                        i_f0 = np.argmin(np.fabs(_f0 - f)) # the f that is closest to f0
-                        i_2f0 = np.argmin(np.fabs((2 * _f0) - f)) # the f that is closest to 2f0
+                        i_f0 = np.argmin(np.fabs(_f0 - f)) # f index that is closest to f0
+                        i_2f0 = np.argmin(np.fabs((2 * _f0) - f)) # closest to 2f0 for (h1h2)
                         h1h2[idx] = spec[i_f0] - spec[i_2f0]
                         f0[idx] = _f0
 
-        
-        if idx==i_test:  # diagnostic info, only at a target frame
+        if idx==i_test:  # show diagnostic info, only at a target frame
+            if len(peaks)<nh: # the highest harmonic number to consider
+                n = len(peaks)
+            else:
+                n = nh
             plt.plot(f,spec)
             plt.vlines(f[peaks[0:n]],np.min(spec),np.max(spec))
             plt.axhline(height)

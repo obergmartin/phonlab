@@ -50,7 +50,7 @@ def compute_sgram(x,fs,w):
     
 
 def sgram(x,fs,chan=0,start=0,end=-1, tf=8000, band='wb',
-          preemph = 0.94, save_name='',slice_time=-1,cmap='Greys'):
+          preemph = 0.94, font_size = 14, save_name='',slice_time=-1,cmap='Greys'):
     """Make pretty good looking spectrograms
 
     * This function calls scipy.signal.spectrogram to calculate a magnitude spectrogram, which is then transformed to decibels, and passed to plt.imshow for plotting.  
@@ -77,6 +77,8 @@ def sgram(x,fs,chan=0,start=0,end=-1, tf=8000, band='wb',
         effective filter bandwidth of the analysis filter ('wb' = 300 Hz, 'nb' = 45 Hz)
     preemph : float, default = 0.94
         add high frequency preemphasis before making the spectrogram, a value between 0 and 1
+    font_size : integer, default = 14
+        the font size to use for the axis labels and tick labels.
     save_name : Path, default = ''
         name of a file to save the figure pyplot.savefig(), by default no file is saved.
     slice_time : float, default = -1
@@ -105,12 +107,13 @@ def sgram(x,fs,chan=0,start=0,end=-1, tf=8000, band='wb',
 
     .. code-block:: Python
     
-         x,fs = phon.loadsig("sf3_cln.wav",chansel=[0]) 
-         phon.sgram(x,fs,start=1.5, end=2.0)
-         plt.axvline(1.71,color="red")
+        example_file = importlib.resources.files('phonlab') / 'data/example_audio/sf3_cln.wav'
+        x,fs = phon.loadsig(example_file,chansel=[0])
+        phon.sgram(x,fs,start=1.5, end=2.0)
+        plt.axvline(1.71,color="red")
 
     .. figure:: images/burst.png
-       :scale: 100 %
+       :scale: 50 %
        :alt: a spectrogram with a red line marking the location of the burst
        :align: center
 
@@ -121,13 +124,13 @@ def sgram(x,fs,chan=0,start=0,end=-1, tf=8000, band='wb',
 
     .. code-block:: Python
     
-         x,fs = phon.loadsig("sf3_cln.wav", chansel=[0]) 
+         x,fs = phon.loadsig(example_file, chansel=[0]) 
          fmtsdf = phon.track_formants(x,fs)    # track the formants
          x2,fs2 = phon.sine_synth(fmtsdf)     # use the formants to produce sinewave synthesis
-         ax1,f,t,Sxx = phon.sgram(x2,fs2, preemph=0)  # plot a spectrogram of it
+         ax1,f,t,Sxx = phon.sgram(x2,fs2, band="nb", preemph=0)  # plot a spectrogram of it
 
     .. figure:: images/sine_synth.png
-       :scale: 90 %
+       :scale: 40 %
        :alt: a spectrogram of sine-wave synthesis
        :align: center
 
@@ -181,6 +184,9 @@ def sgram(x,fs,chan=0,start=0,end=-1, tf=8000, band='wb',
                 extent = extent, origin='lower')
     ax1.grid(which='major', axis='y', linestyle=':')  # add grid lines
     ax1.set(xlabel="Time (sec)", ylabel="Frequency (Hz)")
+    for item in ([ax1.title, ax1.xaxis.label, ax1.yaxis.label] +
+             ax1.get_xticklabels() + ax1.get_yticklabels()):
+        item.set_fontsize(font_size)
     plt.subplots_adjust(left=0, bottom=0, right=1, top=1, wspace=0, hspace=0)
    
     if slice_time > 0:  # if spectral slice is desired, plot the spectrum

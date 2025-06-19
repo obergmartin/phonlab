@@ -949,19 +949,23 @@ the spectrogram of `x`, and the seaborn graphics package is used to add the form
 
 .. code-block:: Python
 
-     x,fs = phon.loadsig("sf3_cln.wav",chansel=[0])
-     df = phon.track_formants(x,fs)
-    
-     phon.sgram(x,fs, cmap="Blues")  # plot the spectrogram
-    
-     seaborn.pointplot(df,x='sec',y='F1',linestyle='none',native_scale=True,marker=".",color='red')
-     seaborn.pointplot(df,x='sec',y='F2',linestyle='none',native_scale=True,marker=".",color='red')
-     seaborn.pointplot(df,x='sec',y='F3',linestyle='none',native_scale=True,marker=".",color='red')
-     seaborn.pointplot(df,x='sec',y='F4',linestyle='none',native_scale=True,marker=".",color='red')
+    example_file = importlib.resources.files('phonlab') / 'data' / 'example_audio' / 'sf3_cln.wav'
+    x,fs = phon.loadsig(example_file, chansel=[0])
+    fmtsdf = phon.track_formants(x, fs, method='ifc',speaker=2,f0_range=[60,350])
+
+    ret = phon.sgram(x,fs, tf=6000, cmap="Reds")  # plot the spectrogram
+
+    dot_color = "dodgerblue"
+    sns.pointplot(fmtsdf,x='sec',y='F1',linestyle='none',native_scale=True,marker=".",color=dot_color)
+    sns.pointplot(fmtsdf,x='sec',y='F2',linestyle='none',native_scale=True,marker=".",color=dot_color)
+    sns.pointplot(fmtsdf,x='sec',y='F3',linestyle='none',native_scale=True,marker=".",color=dot_color)
+    sns.pointplot(fmtsdf,x='sec',y='F4',linestyle='none',native_scale=True,marker=".",color=dot_color)
+
+    fmtsdf.to_csv("sf3_cln.csv",index=False)
 
 .. figure:: images/track_formants.png
-   :scale: 80 %
-   :alt: a spectrogram with the estimated vowel formants marked with red dots 
+   :scale: 33%
+   :alt: a spectrogram with the estimated vowel formants marked with blue dots 
    :align: center
 
    Plotting the formants found by `track_formants()` on the spectrogram of the utterance.

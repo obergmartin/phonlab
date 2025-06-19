@@ -1,4 +1,4 @@
-name: lsa25
+name: phonlab
 channels:
   - conda-forge
   - defaults
