@@ -16,7 +16,7 @@ def get_rms(y, fs, scale=False):
         y : ndarray
             A one-dimensional array of audio samples
         fs : int
-            Sampling rate of **x**, if it is an array.
+            Sampling rate of **x**
         scale : boolean, default = False
             optionally scale the rms amplitude to maximum peak.
 
@@ -47,7 +47,7 @@ def get_rms(y, fs, scale=False):
     return DataFrame({'sec': sec, 'rms':rms})
 
 def get_f0_sift(y, fs, f0_range = [63,400], pre = 0.94):
-    """Track the fundamental frequency of voicing (f0)
+    """Track the fundamental frequency of voicing (f0), using a time-domain method.
 
     The method in this function is an implementation of John Markel's (1972) simplified inverse filter tracking algorithm (SIFT) which is also used in track_formants().  LPC coefficients are calculated for each frame and the audio signal is inverse filtered with these, resulting in a quasi glottal waveform. Then autocorrelation is used to estimate the fundamental frequency.  Probability of voicing is given from a logistic regression formula using `rms` and `c` trained to predict the voicing state as determined by EGG data using the function `phonlab.egg2oq()` over the 10 speakers in the ASC corpus of Mandarin speech. The log odds of voicing in that training data was given by `odds = -4.31 + 0.17*rms + 13.29*c`, and probability of voicing is thus:  `probv = odds / (1 + odds)`.
 
@@ -56,7 +56,7 @@ def get_f0_sift(y, fs, f0_range = [63,400], pre = 0.94):
         y : ndarray
             A one-dimensional array of audio samples
         fs : int
-            Sampling rate of **x**, if it is an array.
+            Sampling rate of **x**
         f0_range : list of two integers, default = [63,400]
             The lowest and highest values to consider in pitch tracking.
 
@@ -70,7 +70,7 @@ def get_f0_sift(y, fs, f0_range = [63,400], pre = 0.94):
     The columns in the returned dataframe are for each frame of audio:
         * sec - time at the midpoint of each frame
         * f0 - estimate of the fundamental frequency
-        * rms - estimate of the rms amplitude found with `librosa.feature.rms()`
+        * rms - peak normalized rms amplitude in the band from 0 to 8000 Hz
         * c - value of the peak autocorrelation found in the frame
         * probv - estimated probability of voicing
         * voiced - a boolean, true if probv>0.5
@@ -145,7 +145,7 @@ def get_f0_sift(y, fs, f0_range = [63,400], pre = 0.94):
     
 
 def get_f0_srh(y, fs, f0_range = [60,400]):
-    """Track the fundamental frequency of voicing (f0)
+    """Track the fundamental frequency of voicing (f0), using a frequency domain method.
 
 This function is an implementation of Drugman and Alwan's (2011) "Summation of 
 Residual Harmonics" (SRH) method of pitch tracking.  The signal is downsampled to 
@@ -159,7 +159,7 @@ Parameters
     y : string or ndarray
         A one-dimensional array of audio samples
     fs : int
-        Sampling rate of **x**, if it is an array.
+        Sampling rate of **x**
     f0_range : list of two integers, default = [63,400]
         The lowest and highest values to consider in pitch tracking. This algorithm is quite sensitive to the values given in this setting.
 
@@ -173,7 +173,7 @@ Note
 The columns in the returned dataframe are for each frame of audio:
     * sec - time at the midpoint of each frame
     * f0 - estimate of the fundamental frequency
-    * rms - rms amplitude, bandlimited to 5 kHz
+    * rms - peak normalized rms amplitude in the band from 0 to 5 kHz
     * srh - value of SRH (normalized sum of the residual harmonics)
     * probv - estimated probability of voicing
     * voiced - a boolean, true if probv>0.5
@@ -235,6 +235,34 @@ and pitch estimation based on residual harmonics. ISCA (Florence, Italy) pp. 197
     return DataFrame({'sec': sec, 'f0':f0, 'rms':rms, 'srh':c, 'probv': probv, 'voiced':voiced})
 
 def get_f0_ac(y, fs, f0_range = [60,400]):
+    """Track the fundamental frequency of voicing (f0), using a time domain method.
+
+    This function implements a simple autocorrelation method of pitch tracking with no filtering prior to calculating the autocorrelation. Probability of voicing is given from a logistic regression formula using `rms` and `c` trained to predict the voicing state as determined by EGG data using the function `phonlab.egg2oq()` over the 10 speakers in the ASC corpus of Mandarin speech. 
+
+    Parameters
+    ==========
+        y : ndarray
+            A one-dimensional array of audio samples
+        fs : int
+            Sampling rate of **x**
+        f0_range : list of two integers, default = [63,400]
+            The lowest and highest values to consider in pitch tracking.
+
+    Returns
+    =======
+        df: pandas DataFrame  
+            measurements at 5 msec intervals.
+
+    Note
+    ====
+    The columns in the returned dataframe are for each frame of audio:
+        * sec - time at the midpoint of each frame
+        * f0 - estimate of the fundamental frequency
+        * rms - peak normalized rms amplitude in the band from 0 to fs/2
+        * c - value of the peak autocorrelation found in the frame
+        * probv - estimated probability of voicing
+        * voiced - a boolean, true if probv>0.5
+    """
 
     # constants and global variables
     frame_length_sec = 1/f0_range[0]
@@ -311,7 +339,7 @@ def f0_from_harmonics(f_p,i,h,nh):
     return C,mean_f0 
     
 def get_f0_acd(y, fs, prom=14, f0_range=[60,400], min_height = 0.6, test_time=-1):
-    """Track the fundamental frequency of voicing (f0) from harmonics in the short time spectrum
+    """Track the fundamental frequency of voicing, using a frequency domain method.
 
 This function implements the 'approximate common denominator" algorithm proposed by Aliik, Mihkla and Ross (1984), which was an improvement on the method proposed by Duifuis, Willems and Sluyter (1982).  The algorithm finds candidate harmonic peaks in the spectrum, and chooses a value of f0 that best predicts the harmonic pattern.  One feature of this method is that it reports a voice quality measure (the difference in the amplitudes of harmonic 1 and harmonic 2).
 
@@ -320,7 +348,7 @@ Parameters
     y : ndarray
         A one-dimensional array of audio samples
     fs : int
-        the sampling rateof the audio in **y**.
+        the sampling rate of the audio in **y**.
     prom : numeric, default = 14 dB
         In deciding whether a peak in the spectrum is a possible harmonic, this prominence value is passed to scipy.find_peaks().  A larger value means that the spectral peak must be more prominent to be considered as a possible harmonic peak, and thus the algorithm is less likely to report pitch values when the parameter is given a high value.  In general, 20 is a high value, and 3 is low.
     f0_range : a list of two integers, default=[60,400]
@@ -338,7 +366,7 @@ Note
     The columns in the returned dataframe are for each frame of audio:
         * sec - time at the midpoint of each frame
         * f0 - estimate of the fundamental frequency
-        * rms - estimate of the rms amplitude, bandlimited to 2400 Hz
+        * rms - rms amplitude in a low frequency band from 0 to 1200 Hz
         * h1h2 - the difference in the amplitudes of the first two harmonics (H1 - H2) in dB
 
 Example
