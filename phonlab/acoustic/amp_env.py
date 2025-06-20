@@ -37,12 +37,13 @@ def amplitude_envelope(x, fs, bounds = [], target_fs=22050, cutoff=30, order=2 )
     =======
 
     .. code-block:: Python
-    
-         hband, fs = phon.amplitude_envelope("sf3_cln.wav",bounds=[3000,8000])
-         lband, fs = phon.amplitude_envelope("sf3_cln.wav",bounds=[120,3000])
+
+         x,fs = phon.loadsig(mywavefile,chansel=[0])
+         hband, fs = phon.amplitude_envelope(x,fs,bounds=[3000,8000])
+         lband, fs = phon.amplitude_envelope(x,fs,bounds=[120,3000])
          diff = lband-hband
          time_axis = np.arange(len(diff))/fs
-         ax1,f,t,Sxx = phon.sgram("sf3_cln.wav")  # plot the spectrogram
+         ax1,f,t,Sxx = phon.sgram(x,fs)  # plot the spectrogram
          ax2 = ax1.twinx()
          ax2.plot(time_axis,diff, color = "red")  # add scaled diff function
          ax2.axhline(0) 
@@ -56,13 +57,13 @@ def amplitude_envelope(x, fs, bounds = [], target_fs=22050, cutoff=30, order=2 )
 
 
     """
-    
-    x2, fs = prep_audio(x,fs, target_fs = target_fs, pre=0, quiet = True)
+    y = np.copy(x)
+    y, fs = prep_audio(y,fs, target_fs = target_fs, pre=0, quiet = True)
 
     if bounds:
         coefs = scipy.signal.butter(8, bounds, fs=fs, btype='bandpass', output='sos')
-        x2 = scipy.signal.sosfiltfilt(coefs, x2) 
+        y = scipy.signal.sosfiltfilt(coefs, y) 
     
     coefs = scipy.signal.butter(order, cutoff, fs=fs, btype='lowpass', output='sos')
-    y = scipy.signal.sosfiltfilt(coefs, np.abs(x2))
+    y = scipy.signal.sosfiltfilt(coefs, np.abs(y))
     return y, fs

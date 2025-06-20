@@ -30,10 +30,10 @@ Table of Contents
 .. toctree::
     :maxdepth: 2
 
+    prep_audio
     acoustphon
     articphon
     audphon
-    prep_audio
     textgrids
     corpora
     util

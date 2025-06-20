@@ -32,6 +32,11 @@ Consonant Features
 .. autofunction:: phonlab.fricative
 .. autofunction:: phonlab.burst
 
+Rhythm
+------
+.. autofunction:: phonlab.get_rhythm_spectrum
+.. autofunction:: phonlab.rhythmogram
+
 
 
 

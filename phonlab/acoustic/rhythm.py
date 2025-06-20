@@ -6,6 +6,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from librosa.util import frame
 from librosa import frames_to_time
+from ..utils.prep_audio_ import prep_audio
 
 def rem_dc(x):
     '''Remove the DC component of a signal.'''
@@ -33,10 +34,10 @@ def centerpass(x, center, bw, fs):
 
 # this function takes a chunk of waveform and returns a frequency spectrum
 # sec is the size of the chunk in seconds
-def get_rhythm_spectrum(x,fs,chunk_size = 4): 
+def get_rhythm_spectrum(x,fs): 
     """Return a rhythm spectrum - ala Tilsen & Johnson, 2008
 
-    This approach to measuring rythmicity was described by Tilsen and Johnson (2008).  The code here and in `rhythmogram` is a translation and extension of Tilsen's Matlab code.  This function takes a chunk of waveform (best if it is 4 seconds long) and computes a spectrum of the bandpass filtered amplitude envelope.  It finds periodicity in the amplitude envelope and returns a spectrum in the range from 1 to 7 Hz, tracking components that repeat at intervals of 1 second down to a repetition rate of 140 ms.
+    This approach to measuring rythmicity was described by Tilsen and Johnson (2008).  The code here and in `rhythmogram` is a translation and extension of Tilsen's Matlab code.  This function takes a chunk of waveform (best if it is 4 seconds long) and computes a spectrum of the bandpass filtered amplitude envelope.  It finds periodicity in the amplitude envelope and returns a spectrum in the range from **f** to 7 Hz, tracking components in the amplitude envelope that repeat at low frequency.  The lowest frequency represented **f** is determined from the duration of the waveform in **x**, which should be at least 4 seconds for accurate detection of slow rhythmic components.s
 
     Parameters
     ==========
@@ -44,8 +45,6 @@ def get_rhythm_spectrum(x,fs,chunk_size = 4):
         A one dimensional array of audio samples - 
     fs : int
         The sampling frequency of x
-    chunk_size : float, default = 4
-        The size (in seconds) of the audio clip in x
 
     Returns
     =======
@@ -62,14 +61,26 @@ def get_rhythm_spectrum(x,fs,chunk_size = 4):
     ========
 
     .. code-block:: Python
-         f,Sx = rhythm.get_rhythm_spectrum(slice,fs,chunk_size)
-         plt.plot(f,Sx)
+    
+        x,fs = phon.loadsig("s09003.wav")
+        slice = x[fs*3:fs*7]
+
+        f,Sx = phon.get_rhythm_spectrum(slice,fs)
+        plt.plot(f,Sx)
+
+    .. figure:: images/get_rhythm_spectrum.png
+       :scale: 40 %
+       :alt: the spectrum of the amplitude envelope of a 4 second chunk of audio
+       :align: center
+
+       The spectrum of the amplitude envelope of a 4 second chunk of audio.  This section of speech in Spanish has an oscillation of about 3 Hz; regular repetition of amplitude peaks at intervals of about 330 msec.
          
     """
     
     ds_rate = 100
     ds_factor = fs//ds_rate
     npoints = 512
+    chunk_size = len(x)/fs
 
     # Amplitude Envelope.
     x = bandpass(x, cutoffs=[100, 1500], fs=fs, order=2)
@@ -86,16 +97,18 @@ def get_rhythm_spectrum(x,fs,chunk_size = 4):
     
     return (freq[i],powsd[i]) 
     
-def rhythmogram(sig):
+def rhythmogram(x,fs):
     """Return a rhythm spectrogram - ala Tilsen & Johnson, 2008
 
-    This approach to measuring rythmicity was described by Tilsen and Johnson (2008).  The code here and in `get_rhythm_spectrum` is a translation and extension of Tilsen's Matlab code.  This function takes the name of an audio file and computes spectra of the bandpass filtered amplitude envelope. Spectra are computed twice a second (i.e. the step size is 0.5 seconds) over windows that are 4 seconds long. It finds periodicity in the amplitude envelope and returns a spectrogram with a frequency range from 1 to 7 Hz, tracking components that repeat at intervals of 1 second down to a repetition rate of 140 ms.
+    The approach to measuring rythmicity that is implemented by this function was described by Tilsen and Johnson (2008).  The code here and in `get_rhythm_spectrum` is a translation and extension of Tilsen's Matlab code.  This function takes a buffer of audio and computes spectra of the amplitude envelope of the bandpass [100 - 1500Hz] filtered signal. Spectra are computed twice a second (i.e. the step size is 0.5 seconds) over windows that are 4 seconds long. It finds periodicity in the amplitude envelope and returns a spectrogram with a frequency range from 1 to 7 Hz, tracking components that repeat at intervals of once per second down to a repetition rate of 140 ms.
     
     Parameters
     ==========
 
-    sig : string
-        The name of an audio file
+    x : ndarray
+        A 1-D array of audio samples
+    fs : int
+        the sampling frequency of the audio in **x** (in Hz)
 
     Returns
     =======
@@ -106,7 +119,7 @@ def rhythmogram(sig):
         the time axis of the rhythmogram, in seconds
         
     Sxx : ndarray, two-dimensional
-        the amplidude values of the array, axis 1 is time, axis 0 is frequency
+        the amplidude values of the rhythmogram, axis 1 is time, axis 0 is frequency
 
     References
     ==========
@@ -116,14 +129,15 @@ def rhythmogram(sig):
     ========
 
     .. code-block:: Python
-    
-         f,ts,Sxx = phon.rhythmogram("s1202a.wav")  # calculate rhythm spectra over time
+
+         x,fs = phon.loadsig("s1202a.wav", chansel=[0])
+         f,ts,Sxx = phon.rhythmogram(x,fs)  # calculate rhythm spectra over time
          
          m = np.mean(Sxx,axis=0)  # the mean spectrum of the file
          sd = np.std(Sxx,axis=0)  # the standard deviation of the spectrum
          Sxx_thresh = Sxx - (m + 0.5*sd)   # subtract a threshold to find "rhythmic" sections
         
-         start = 136
+         start = 136  # seconds, show the thresholded spectrogram for a 30 second interval
          end = 166
          s = np.int32((start-2) *2)  # start frame, two frames per second
          e = np.int32((end-2) *2) # end frame
@@ -133,8 +147,8 @@ def rhythmogram(sig):
                origin='lower',cmap="coolwarm",interpolation="spline36")
          plt.set(xlabel="Time (sec)", ylabel="Frequency (Hz)")
 
-     .. figure:: images/rhythmogram.png
-       :scale: 80 %
+    .. figure:: images/rhythmogram.png
+       :scale: 40 %
        :alt: a time/frequency plot of low frequency energy in a 30 second long chunk of speech
        :align: center
 
@@ -142,11 +156,7 @@ def rhythmogram(sig):
 
     """
     
-    fs, x = scipy.io.wavfile.read(sig)
-    x_t = np.arange(len(x)) / fs  # time axes
-    print(f"file is {len(x)/fs} seconds long")
-
-    # Amplitude Envelope.
+    # Amplitude Envelope.    
     y = bandpass(x, cutoffs=[100, 1500], fs=fs, order=2)
     y = lowpass(np.fabs(y), cutoff=10, fs=fs, order=6)
 
@@ -154,7 +164,6 @@ def rhythmogram(sig):
     fs_env = 100  # desired sampling frequency of the envelope
     ds_factor = fs//fs_env  # new rate will be 100 samples per second
     env = rem_dc(scipy.signal.decimate(y, ds_factor, ftype = 'fir', zero_phase=True))
-    ds_t = (np.arange(len(env)) / fs_env) + (0.5/fs_env)  # time axes
 
     # divide into frames, window them
     flen_sec = 4
