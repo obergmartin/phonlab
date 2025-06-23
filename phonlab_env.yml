@@ -15,7 +15,6 @@ dependencies:
   - srt=3.5
   - pip
   - pip:
-      - --extra-index-url https://test.pypi.org/simple
       - colorednoise==2.2
       - praat-parselmouth==0.4.5
       - phonlab
