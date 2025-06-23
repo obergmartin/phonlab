@@ -5,7 +5,7 @@ import numpy as np
 import librosa
 import pandas as pd
 
-def egg_to_oq(x, fs, hop_dur = 0.005, min_f0 = 60, max_f0 = 400,
+def egg_to_oq(x, fs, hop_dur = 0.005, f0_range = [60,400],
            hp_cut = 70, hp_order = 8, threshold=0.43):
     """Get glottal open quotient from electroglottography data
     
@@ -27,10 +27,8 @@ def egg_to_oq(x, fs, hop_dur = 0.005, min_f0 = 60, max_f0 = 400,
             the sampling rate of **x**
         hop_dur : float, default = 0.005
             interval in seconds between frames (0.005 seconds = 5 milliseconds)
-        min_f0 : int, default = 60
-            minimum possible F0 (in Hz)
-        max_f0 : int, default = 400
-            maximum possible F0 (in Hz)
+        f0_range : list of two integers, default = [63,400]
+            The lowest and highest allowed values of f0.
         hp_cut : int, default = 70 
             highpass filter cut frequency (in Hz) (Rothenberg, 2002)
         hp_order : int, default = 8
@@ -73,7 +71,7 @@ def egg_to_oq(x, fs, hop_dur = 0.005, min_f0 = 60, max_f0 = 400,
 
         
     """
-    window_length = (1.0/min_f0) * 1.5 # add 25% for alignment?
+    window_length = (1.0/f0_range[0]) * 1.5 # add 25% for alignment?
     win = int(window_length*fs)  # window for the longest period 
     hop = int(hop_dur*fs)  # 5ms hop
  
@@ -108,7 +106,7 @@ def egg_to_oq(x, fs, hop_dur = 0.005, min_f0 = 60, max_f0 = 400,
 
     # get peaks in the degg waveform - the glottal closing instants (gci)
     # minimum spacing between peaks (distance) is shortest possible period
-    peak_sep = 1.0/max_f0
+    peak_sep = 1.0/f0_range[1]
     degg_peaks = scipy.signal.find_peaks(degg,distance=peak_sep*fs, height=0.5) 
     glottal = np.zeros(degg.size)
     glottal[degg_peaks[0]]=1  # closing times (peaks returns indices of peaks)

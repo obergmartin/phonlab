@@ -49,7 +49,7 @@ def get_rms(y, fs, scale=False):
 def get_f0_sift(y, fs, f0_range = [63,400], pre = 0.94):
     """Track the fundamental frequency of voicing (f0), using a time-domain method.
 
-    The method in this function is an implementation of John Markel's (1972) simplified inverse filter tracking algorithm (SIFT) which is also used in track_formants().  LPC coefficients are calculated for each frame and the audio signal is inverse filtered with these, resulting in a quasi glottal waveform. Then autocorrelation is used to estimate the fundamental frequency.  Probability of voicing is given from a logistic regression formula using `rms` and `c` trained to predict the voicing state as determined by EGG data using the function `phonlab.egg2oq()` over the 10 speakers in the ASC corpus of Mandarin speech. The log odds of voicing in that training data was given by `odds = -4.31 + 0.17*rms + 13.29*c`, and probability of voicing is thus:  `probv = odds / (1 + odds)`.
+    The method in this function is an implementation of John Markel's (1972) simplified inverse filter tracking algorithm (SIFT) which is also used in track_formants().  LPC coefficients are calculated for each frame and the audio signal is inverse filtered with these, resulting in a quasi glottal waveform. Then autocorrelation is used to estimate the fundamental frequency.  Probability of voicing is given from a logistic regression formula using `rms` and `c` trained to predict the voicing state as determined by EGG data using the function `phonlab.egg_to_oq()` over the 10 speakers in the ASC corpus of Mandarin speech. The prediction of the EGG voicing decision was about 85% correct.
 
     Parameters
     ==========
@@ -135,9 +135,12 @@ def get_f0_sift(y, fs, f0_range = [63,400], pre = 0.94):
         ac = cormat[cormat.size//2:] # the autocorrelation is in the last half of the result
         idx = np.argmax(ac[th:tl]) + th # index of peak correlation (in range lowest to highest)
         f0[i] = 1/(idx/fs)      # converted to Hz
-        c[i] = np.sqrt(ac[idx]) / np.sqrt(ac[0])
+        if (ac[0]<= 0) | (ac[idx] <= 0):  # avoid srt of a negative number
+            c[i] = 0
+        else:
+            c[i] = np.sqrt(ac[idx]) / np.sqrt(ac[0])
 
-    odds = np.exp(-4.2 + (0.17*rms[:nb]) + (13.2*c[:nb]))  # logistic formula, trained on ASC corpus
+    odds = np.exp(-0.3 + (0.13*rms[:nb]) + (6.46*c[:nb]))  # logistic formula, trained on ASC corpus
     probv = odds / (1 + odds)
     voiced = probv > 0.5
 
@@ -152,7 +155,9 @@ Residual Harmonics" (SRH) method of pitch tracking.  The signal is downsampled t
 10 kHz, and inverse filtered with LPC analysis to remove the influence of vowel 
 formants. Then harmonics are found in the spectrum of the residual signal.
 Drugman and Alwan found that this technique provides an estimate of F0 that is 
-robust when the audio signal is corrupted by noise.
+robust when the audio signal is corrupted by noise. 
+
+Probability of voicing is given from a logistic regression formula using `rms` and `srh` trained to predict the voicing state as determined by EGG data using the function `phonlab.egg_to_oq()` over the 10 speakers in the ASC corpus of Mandarin speech. The prediction of the EGG voicing decision was about 75% correct.
 
 Parameters
 ==========
@@ -228,7 +233,7 @@ and pitch estimation based on residual harmonics. ISCA (Florence, Italy) pp. 197
                 f0[i] = f        
         c[i] = srh_max
 
-    odds = np.exp(-4.2 + (0.17*rms[:nb]) + (13.2*c[:nb]))  # logistic formula, trained on ASC corpus
+    odds = np.exp(2.75 + (0.12*rms) + (0.4*c))  # logistic formula, trained on ASC corpus
     probv = odds / (1 + odds)
     voiced = probv > 0.5
 
@@ -237,7 +242,7 @@ and pitch estimation based on residual harmonics. ISCA (Florence, Italy) pp. 197
 def get_f0_ac(y, fs, f0_range = [60,400]):
     """Track the fundamental frequency of voicing (f0), using a time domain method.
 
-    This function implements a simple autocorrelation method of pitch tracking with no filtering prior to calculating the autocorrelation. Probability of voicing is given from a logistic regression formula using `rms` and `c` trained to predict the voicing state as determined by EGG data using the function `phonlab.egg2oq()` over the 10 speakers in the ASC corpus of Mandarin speech. 
+    This function implements a simple autocorrelation method of pitch tracking with no filtering prior to calculating the autocorrelation. Probability of voicing is given from a logistic regression formula using `rms` and `c` trained to predict the voicing state as determined by EGG data using the function `phonlab.egg_to_oq()` over the 10 speakers in the ASC corpus of Mandarin speech. The prediction of the EGG voicing decision was about 88% correct.
 
     Parameters
     ==========
@@ -295,9 +300,12 @@ def get_f0_ac(y, fs, f0_range = [60,400]):
         ac = cormat[cormat.size//2:] # the autocorrelation is in the last half of the result
         idx = np.argmax(ac[th:tl]) + th # index of peak correlation (in range lowest to highest)
         f0[i] = 1/(idx/fs)      # converted to Hz
-        c[i] = np.sqrt(ac[idx]) / np.sqrt(ac[0])
+        if (ac[0]<= 0) | (ac[idx] <= 0):
+            c[i] = 0
+        else:
+            c[i] = np.sqrt(ac[idx]) / np.sqrt(ac[0])
 
-    odds = np.exp(-4.2 + (0.17*rms[:nb]) + (13.2*c[:nb]))  # logistic formula, trained on ASC corpus
+    odds = np.exp(0.48 + (0.19*rms) + (5.44*c))  # logistic formula, trained on ASC corpus
     probv = odds / (1 + odds)
     voiced = probv > 0.5
 
@@ -342,6 +350,9 @@ def get_f0_acd(y, fs, prom=14, f0_range=[60,400], min_height = 0.6, test_time=-1
     """Track the fundamental frequency of voicing, using a frequency domain method.
 
 This function implements the 'approximate common denominator" algorithm proposed by Aliik, Mihkla and Ross (1984), which was an improvement on the method proposed by Duifuis, Willems and Sluyter (1982).  The algorithm finds candidate harmonic peaks in the spectrum, and chooses a value of f0 that best predicts the harmonic pattern.  One feature of this method is that it reports a voice quality measure (the difference in the amplitudes of harmonic 1 and harmonic 2).
+
+Probability of voicing is given from a logistic regression formula using `rms` and Duifuis et al.'s `c` parameter trained to predict the voicing state as determined by EGG data using the function `phonlab.egg_to_oq()` over the 10 speakers in the ASC corpus of Mandarin speech. The prediction of the EGG voicing decision was about 86% correct.
+Aliik et al. (1984) used a cutoff of C<3.5 as a voicing threshold.
 
 Parameters
 ==========
@@ -425,6 +436,7 @@ Example
     nb = len(ts)  # the number of frames in the spectrogram
     f0 = np.full(nb,np.nan)  # array filled with nan
     h1h2 = np.full(nb,np.nan)        # array filled with nan
+    c = np.full(nb,5.0)      # default value of c is 5.0
         
     min_dist = int(f0_range[0]/(fs/N)) # min distance btw harmonics
     max_dist = int(f0_range[1]/(fs/N))
@@ -442,7 +454,6 @@ Example
         height = np.min(spec) + min_height * np.abs(np.max(spec)-np.min(spec))  # required height of a peak
         peaks,props = find_peaks(spec, height = height, prominence=prom, distance = min_dist, wlen=dist)
 
-        best_c = 5
         if len(peaks)>2:  # we did find some harmonics?
             for p in range(3):  # for each of the first three spectral peaks
                 for h in range(1,5): # treat it as one of the first four harmonics
@@ -452,8 +463,8 @@ Example
                     if idx==i_test: 
                         print(f'_f0: {_f0:0.1f}, peak: {p}, harmonic: {h}, C: {C:0.2f}')
                         
-                    if (C < 3.5)  & (f0_range[0] < _f0) & (_f0 < f0_range[1]) & (C < best_c):
-                        best_c = C      
+                    if (f0_range[0] < _f0) & (_f0 < f0_range[1]) & (C < c[idx]):
+                        c[idx] = C      
                         i_f0 = np.argmin(np.fabs(_f0 - f)) # f index that is closest to f0
                         i_2f0 = np.argmin(np.fabs((2 * _f0) - f)) # closest to 2f0 for (h1h2)
                         h1h2[idx] = spec[i_f0] - spec[i_2f0]
@@ -475,5 +486,9 @@ Example
             print(f"height = {height:0.2f},max={np.max(spec):0.2f}, min={np.min(spec):0.2f}, c={best_c}")
             print(f"time = {test_time}, f0 = {f0[idx]:0.2f}, h1h2 = {h1h2[idx]:0.2f}")
 
-    return DataFrame({'sec': ts, 'f0':f0, 'rms':rms, 'h1h2':h1h2})
-#----------------------
+    odds = np.exp(8.65 + (0.16*rms) - (0.83*c))  # logistic formula, trained on ASC corpus
+    probv = odds / (1 + odds)
+    voiced = probv > 0.5
+
+    return DataFrame({'sec': ts, 'f0':f0, 'rms':rms, 'h1h2':h1h2, 'c':c, 'probv': probv, 'voiced':voiced})
+
