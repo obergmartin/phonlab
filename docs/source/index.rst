@@ -24,6 +24,8 @@ The docstring examples assume that `phonlab` has been imported as ``phon``::
 
   >>> import phonlab as phon
 
+See the examples folder in the project's `github repository <https://github.com/phonetics-projects/phonlab.git>`_.
+
 
 Table of Contents
 -----------------
