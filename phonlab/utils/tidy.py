@@ -241,20 +241,17 @@ tg : str or None
     The textgrid output as a `str`. If `outfile` is specified, then `None` is
     returned instead.
 
-Examples
---------
+Example
+-------
 
 .. code-block:: Python
 
-    import pandas as pd
-    from phonlab import df_to_tg
-
-    wddf = pd.DataFrame({
+    wddf = pd.DataFrame({                   # create example dataframes
         'word': ['', 'a', 'word'],
         't1': [0.0, 0.1, 0.23647890019],
         't2': [0.1, 0.2, 0.3],
     })
-    ptdf = pd.DataFrame({
+    ptdf = pd.DataFrame({      # a point tier
         'pt': ['pt1', 'pt2'],
         't1': [0.05, 0.15],
     })
@@ -265,17 +262,17 @@ Examples
     })
 
     # Single tier textgrid.
-    df_to_tg(wddf, tiercols='word', outfile='word.TextGrid')
+    phon.df_to_tg(wddf, tiercols='word', outfile='word.TextGrid')
 
     # Single tier textgrid where the column name doesn't match the tier name.
-    df_to_tg(
+    phon.df_to_tg(
         ctxdf,
         tiercols={'ctx': 'context'},
         outfile='ctx.TextGrid'
     )
 
     # Two-tier textgrid. One tier name matches the column name and one does not.
-    df_to_tg(
+    phon.df_to_tg(
         [wddf, ctxdf],
         tiercols=['word', {'ctx': 'context'}],
         outfile='wordctx.TextGrid'
@@ -284,7 +281,7 @@ Examples
     # Three-tier textgrid of two interval tiers and one point tier. The
     # label content is in the 'word', 'pt', and 'ctx' columns, and the
     # textgrid tiernames will be 'word', 'pointevent', and 'context'.
-    df_to_tg(
+    phon.df_to_tg(
         [wddf, ptdf, ctxdf],
         tiercols=['word', {'pt': 'pointevent'}, {'ctx': 'context'}],
         ts=[['t1', 't2'], ['t1', None], ['t1', 't2']],
@@ -292,7 +289,7 @@ Examples
     )
 
     # Specify numeric output to four decimal places.
-    df_to_tg(wddf, 'word', fmt='.4f', outfile='wordt1str.TextGrid')
+    phon.df_to_tg(wddf, 'word', fmt='.4f', outfile='wordt1str.TextGrid')
 
     """
 
@@ -415,6 +412,25 @@ Returns
 
 tiers : list of dataframes
     Textgrid tiers are returned as a list of dataframes for each tier, in the order selected by `tiersel`. The time columns of each dataframe are named `t1` and `t2` for label start and end times of interval tiers, or `t1` for the timepoints of point tiers. The textgrid tier's name is used as the name of the column containing the label content unless column names are provided by `names`. If `tiers` is an empty list `[]` then all textgrid tiers are returned in the list of dataframes.
+
+Example
+-------
+
+In this example we have the name of an existing Praat Textgrid file, and use **tg_to_df()** to read the textgrid into a set of dataframes (one for each tier of the textgrid file.
+
+.. code-block:: Python
+
+    textgrid_name = importlib.resources.files('phonlab') / 'data' / 'example_audio' / 'im_twelve.TextGrid'
+    phdf, wddf = phon.tg_to_df(textgrid_name, tiersel=['phone', 'word'])
+    phdf.head()
+
+.. figure:: images/tg_to_df.png
+    :scale: 50 %
+    :alt: The first few rows of the phones dataframe (phdf) given by tg_to_df()
+    :align: center
+
+    The first few rows of the phones dataframe (phdf) given by `tg_to_df()`
+
     '''
     tg = pcall('Read from file...', str(tg))[0]
     ntiers = pcall(tg, 'Get number of tiers')
@@ -489,6 +505,27 @@ Returns
 
 df : dataframe
     The original input dataframe with new context columns added. Note that the new columns are inserted in order around `col`.
+
+Example
+-------
+In this example we have the name of an existing textgrid, read it into a Pandas dataframe with `phon.tg_to_df()` and
+then with `phon.add_context()` add two context columns to the dataframe, one for the previous phone, and one for the following phone.
+
+.. code-block:: Python
+
+    textgrid_name = importlib.resources.files('phonlab') / 'data' / 'example_audio' / 'im_twelve.TextGrid'
+
+    phdf, wddf = phon.tg_to_df(textgrid_name, tiersel=['phone', 'word'])
+    phdf = phon.add_context(phdf,'phone',nprev=1,nnext=1)
+    phdf.head()
+
+
+.. figure:: images/add_context.png
+    :scale: 50 %
+    :alt: The first few rows of the phones dataframe (phdf) given by add_context()
+    :align: center
+
+    The first few rows of the phones dataframe (phdf) given by `add_context()`
     '''
     colidx = df.columns.get_loc(col)
     nextrng = range(nnext, 0, -1)
@@ -553,6 +590,25 @@ Returns
 
 mergedf : dataframe
     Merged dataframe of time-matched rows from `inner_df` and `outer_df`.
+
+Example
+-------
+In this example we have the name of an existing Praat TextGrid file, we read it into Pandas DataFrames with `phon.tg_to_df()`, and then merge two of the dataframes into a single larger dataframe that has all of the 
+information that was in them using `phon.merge_tiers()`.  The `inner` dataframe is the one with intervals/events that are inside the intervals/events in the `outer` dataframe.  In this case the intervals in the 'phone' tier are contained in the intervals in the 'word' tier.
+
+.. code-block:: Python
+
+    textgrid_name = importlib.resources.files('phonlab') / 'data' / 'example_audio' / 'im_twelve.TextGrid'
+    phdf, wddf = phon.tg_to_df(textgrid_name, tiersel=['phone', 'word'])
+    tgdf = phon.merge_tiers(inner_df=phdf, outer_df=wddf, suffixes=['', '_wd'])
+    tgdf.head()
+
+.. figure:: images/merge_tiers.png
+    :scale: 50 %
+    :alt: The first few rows of the combined dataframe given by merge_tiers()
+    :align: center
+
+    The first few rows of the combined dataframe given by `merge_tiers()`    
     '''
     common_cols = np.intersect1d(inner_df.columns, outer_df.columns)
     if drop_repeated_cols in ['inner', 'inner_df']:
@@ -645,7 +701,7 @@ Adjust word 't1' values up to 5 ms.
 .. code-block:: Python
 
     try:
-       wddf['t1'] = adjust_boundaries(wddf['t1'], phdf['t1'], tolerance=0.005)
+       wddf['t1'] = phon.adjust_boundaries(wddf['t1'], phdf['t1'], tolerance=0.005)
     except ValueError as e:
        badt = ', '.join([f'{t:0.4f}' for t in e.args[1]])
        msg = f"Word-phone boundary mismatch greater than {tolerance} in {tgpath}. " \
@@ -718,6 +774,25 @@ Note
     `divdf` is merged with the input dataframe `df` if it is provided. If this
     behavior is not desired, then `df` should be None. For example, use
     `ts=[df['t1'], df['t2']], df=None` instead of `ts=['t1', 't2'], df=df`.
+
+Example
+-------
+In this example we have a dataframe produced by `phon.tg_to_df()`, and `phon.merge_tiers()` which has columns for each `phone` and it's starting and ending times (t1,t2).  We use the Pandas function `query` to get a subset dataframe that just has vowels in it, and then use `phon.explode_intervals()` to add new rows specifying the time points at 20%, 50% and 80% of the way through each vowel.
+
+.. code-block:: Python
+
+    vowels = ['ay', 'eh', 'iy', 'aa', 'aw']
+    vdf = tgdf.query(f'phone in {vowels}').copy()  # make a dataframe that just has vowels
+    vdf = phon.explode_intervals([0.2,0.5, 0.8], ts=['t1', 't2'], df=vdf) # get times for observations
+    vdf.head()
+
+
+.. figure:: images/explode_intervals.png
+    :scale: 50 %
+    :alt: The first few rows of a 'vowels' dataframe with observation points added by `phon.explode_intervals()`
+    :align: center
+
+    The first few rows of a 'vowels' dataframe with observation points added by `phon.explode_intervals()`    
     '''
     # TODO: test different kinds of indexes in input dataframe, e.g. MultiIndex
     t1col = ts[0] if df is None else df[ts[0]]
@@ -766,6 +841,12 @@ def interpolate_measures(meas_df, meas_ts, interp_df=None, interp_ts=None, tol=N
     of measurement values is performed for times specified by the time column of
     another dataframe or from an array or list of times.
 
+    This function provides an interface to `numpy.interp()` in order to 
+    add acoustic or articulatory measurements from a dataframe that has measurements at 
+    monotonically increasing timepoints through the whole file (like F0 measurements at 
+    5 ms intervals for example) to a dataframe that has target locations at which we 
+    would like to extract measurements (like vowel midpoints, for example).
+
 Parameters
 ----------
 
@@ -808,6 +889,34 @@ df : dataframe
     `interp_df` and returned. Otherwise, a dataframe of interpolation times and corresponding
     measurement values is returned. If `interp_ts` has an index, that index is used as the
     returned dataframe's index, and a default index is assigned otherwise.
+
+Example
+-------
+TextGrid information is in a dataframe `vdf`, which has a column `obs_t` of times at which we 
+would like to have formant measurements from the data in file 'im_twelve.csv' (produced by 
+`phon.track_formants()`).  The function `phon.interpolate_measures()` extracts data from the 
+formants dataframe and adds measurements at the desired observation times in the textgrid dataframe.
+
+.. code-block:: Python
+
+    fmtsdf = pd.read_csv('im_twelve.csv')  # read in the csv of formants measurements
+
+    vdf = phon.interpolate_measures(
+        meas_df=fmtsdf[['sec','F1', 'F2', 'F3', 'F4']],  # meas_ts and cols to interpolate only
+        meas_ts='sec',        # time index in the measurements dataframe
+        interp_df=vdf,       # textgrid dataframe
+        interp_ts='obs_t',  # target observation times in the textgrid
+        overwrite=True
+    )
+    vdf.head()
+
+
+.. figure:: images/interpolate_measures.png
+    :scale: 50 %
+    :alt: The first few rows of a 'vowels' dataframe with formant measurements added by `phon.interpolate_measures()`
+    :align: center
+
+    The first few rows of a 'vowels' dataframe with with formant measurements added by `phon.interpolate_measures()`        
     '''
 
     interp_ts = interp_ts if interp_df is None else interp_df[interp_ts]
