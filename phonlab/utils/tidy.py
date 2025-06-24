@@ -680,10 +680,8 @@ match of a value in `inner_ts`.
 Raises
 ======
 
-A ValueError is raised if one or more boundaries are not within tolerance. A
-list of the values from `outer_ts` that are out of tolerance is included as the
-second value of the Exception object's `args` attribute. An error message is
-the first value of `args`.
+    ValueError: A ValueError is raised if one or more boundaries are not within tolerance. A list of the values from `outer_ts` that are out of tolerance is included as the second value of the Exception object's `args` attribute. An error message is the first value of `args`.
+
 
 Examples
 ========
@@ -692,14 +690,10 @@ Read phone and word tiers from a textgrid.
 
 .. code-block:: Python
 
-    from phonlab import tg_to_df, adjust_boundaries
+    [phdf, wddf] = phon.tg_to_df(tgpath, tiersel=['phone', 'word'])
 
-    [phdf, wddf] = tg_to_df(tgpath, tiersel=['phone', 'word'])
 
-Adjust word 't1' values up to 5 ms.
-
-.. code-block:: Python
-
+    # Adjust word 't1' values up to 5 ms.
     try:
        wddf['t1'] = phon.adjust_boundaries(wddf['t1'], phdf['t1'], tolerance=0.005)
     except ValueError as e:
