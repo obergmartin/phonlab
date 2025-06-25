@@ -57,8 +57,8 @@ def get_rhythm_spectrum(x,fs):
     ==========
     Tilsen, S. & Johnson, K. (2008) Low-frequency Fourier analysis of speech rhythm. Journal of the Acoustical Society of America 124(2), EL34-EL39.
     
-    Examples
-    ========
+    Example
+    =======
 
     .. code-block:: Python
     
@@ -100,18 +100,18 @@ def get_rhythm_spectrum(x,fs):
 def rhythmogram(x,fs):
     """Return a rhythm spectrogram - ala Tilsen & Johnson, 2008
 
-    The approach to measuring rythmicity that is implemented by this function was described by Tilsen and Johnson (2008).  The code here and in `get_rhythm_spectrum` is a translation and extension of Tilsen's Matlab code.  This function takes a buffer of audio and computes spectra of the amplitude envelope of the bandpass [100 - 1500Hz] filtered signal. Spectra are computed twice a second (i.e. the step size is 0.5 seconds) over windows that are 4 seconds long. It finds periodicity in the amplitude envelope and returns a spectrogram with a frequency range from 1 to 7 Hz, tracking components that repeat at intervals of once per second down to a repetition rate of 140 ms.
+The approach to measuring rythmicity that is implemented by this function was described by Tilsen and Johnson (2008).  The code here and in `get_rhythm_spectrum` is a translation and extension of Tilsen's Matlab code.  This function takes a buffer of audio and computes spectra of the amplitude envelope of the bandpass [100 - 1500Hz] filtered signal. Spectra are computed twice a second (i.e. the step size is 0.5 seconds) over windows that are 4 seconds long. It finds periodicity in the amplitude envelope and returns a spectrogram with a frequency range from 1 to 7 Hz, tracking components that repeat at intervals of once per second down to a repetition rate of 140 ms.
     
-    Parameters
-    ==========
+Parameters
+----------
 
     x : ndarray
         A 1-D array of audio samples
     fs : int
         the sampling frequency of the audio in **x** (in Hz)
 
-    Returns
-    =======
+Returns
+-------
     f : ndarray, one-dimensional
         the frequency axis of the rhythmogram, in Hz
         
@@ -121,14 +121,17 @@ def rhythmogram(x,fs):
     Sxx : ndarray, two-dimensional
         the amplidude values of the rhythmogram, axis 1 is time, axis 0 is frequency
 
-    References
-    ==========
-    Tilsen, S. & Johnson, K. (2008) Low-frequency Fourier analysis of speech rhythm. Journal of the Acoustical Society of America 124(2), EL34-EL39.
-    
-    Examples
-    ========
 
-    .. code-block:: Python
+References
+----------
+    
+Tilsen, S. & Johnson, K. (2008) Low-frequency Fourier analysis of speech rhythm. Journal of the Acoustical Society of America 124(2), EL34-EL39.
+    
+
+Example
+-------
+
+.. code-block:: Python
 
          x,fs = phon.loadsig("s1202a.wav", chansel=[0])
          f,ts,Sxx = phon.rhythmogram(x,fs)  # calculate rhythm spectra over time
@@ -147,7 +150,7 @@ def rhythmogram(x,fs):
                origin='lower',cmap="coolwarm",interpolation="spline36")
          plt.set(xlabel="Time (sec)", ylabel="Frequency (Hz)")
 
-    .. figure:: images/rhythmogram.png
+.. figure:: images/rhythmogram.png
        :scale: 40 %
        :alt: a time/frequency plot of low frequency energy in a 30 second long chunk of speech
        :align: center

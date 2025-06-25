@@ -379,6 +379,8 @@ Note
         * f0 - estimate of the fundamental frequency
         * rms - rms amplitude in a low frequency band from 0 to 1200 Hz
         * h1h2 - the difference in the amplitudes of the first two harmonics (H1 - H2) in dB
+        * probv - estimated probability of voicing
+        * voiced - a boolean, true if probv>0.5
 
 Example
 =======
