@@ -17,8 +17,10 @@ Auditory Representations
 .. autofunction:: phonlab.mfcc_to_df
 .. autoclass:: phonlab.Audspec
     :members:
+    :member-order: bysource
 
 Helper Functions
 ----------------
 .. autofunction:: phonlab.peak_rms
 .. autofunction:: phonlab.hz2bark
+.. autofunction:: phonlab.bark2hz

@@ -1,4 +1,4 @@
-__all__ = ['hz2bark', 'fricative']
+__all__ = ['hz2bark', 'bark2hz', 'fricative']
 
 import nitime.algorithms as tsa  # has the multitaper routine
 import numpy as np
@@ -29,6 +29,24 @@ def hz2bark(hz):
     """
     
     return 7 * np.arcsinh(hz/650)
+
+def bark2hz(self, bark):
+    '''
+    Convert frequency in Hz to Bark using the Schroeder 1977 formula.
+
+    Parameters
+    ----------
+
+    bark: scalar or array
+        Frequency in Bark.
+
+    Returns
+    -------
+    scalar or array
+        Frequency in Hz, in an array the same size as `bark`, or a scalar if `bark` is a scalar.
+    '''
+    return 650 * np.sinh(bark/7)
+
 
 def fricative(x,fs,t):
     """
