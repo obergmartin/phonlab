@@ -61,6 +61,8 @@ def sgram(x,fs,chan=0,start=0,end=-1, tf=8000, band='wb',
     
     * The function uses one of two window lengths - 40 msec for narrow band spectrograms, or 8 msec for wideband spectrograms.  
 
+    * One option is to add a "spectral slice" to the display - the amplitude/frequency spectrum at a particular point in time.
+
     Parameters
     ==========
     x : ndarray

@@ -90,8 +90,8 @@ class Audspec(object):
        (top) The "tgram" auditory representation, showing the gradient of change in critical bands.
 
 
-    Properties of an Audspec object
-    ===============================
+    Methods and Attributes in an Audspec object
+    ===========================================
     
     """
 

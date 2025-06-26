@@ -3,7 +3,7 @@ __all__=['prep_audio']
 import numpy as np
 from scipy.signal import resample
 
-def prep_audio(x, fs, target_fs=22050, pre = 0, scale = True, outtype = "float", quiet = False):
+def prep_audio(x, fs, target_fs=32000, pre = 0, scale = True, outtype = "float", quiet = False):
     """ Prepare an array of audio waveform samples for acoustic analysis. 
     
 Parameters
@@ -14,10 +14,9 @@ Parameters
     fs : int
           The sampling rate of the sound in **x**.
    
-    target_fs : int, default=22050
+    target_fs : int, default=32000
         The desired sampling rate of the audio samples that will be returned by the function.  
-        Set **target_fs = None** if you want to keep the same **fs** sampling rate as passed 
-        for the array in **x**.
+        Set **target_fs = None** if you don't want to change the sampling rate.
 
     pre : float, default = 0
         how much high frequency preemphasis to apply (between 0 and 1).
@@ -64,16 +63,18 @@ Take the right channel, and resample to 16,000 Hz
 
     """
 
-    if target_fs == None:  # use the input fs as your target, instead of 22050
+    if target_fs == None:
         target_fs = fs
         x2 = x
-    elif target_fs != fs:  # resample to 'target_fs' samples per second
-        if not quiet: print(f'Resampling from {fs} to {target_fs}')
+    else:  # resample to 'target_fs' samples per second
+        if not quiet: 
+            print(f'Resampling from {fs} to {target_fs}')
+            if target_fs > fs:
+                print("WARNING: upsampling can negatively impact some analyses")
         resample_ratio = target_fs/fs
         new_size = int(len(x) * resample_ratio)  # size of the resampled version
         x2 = resample(x,new_size)  # now sampled at desired sampling freq
-    else: 
-        x2 = x
+        
         
     if (np.max(x2) + np.min(x2)) < 0:  x2 = -x2   #  set the polarity of the signal
     if (pre > 0): y = np.append(x2[0], x2[1:] - pre * x2[:-1])  # apply pre-emphasis

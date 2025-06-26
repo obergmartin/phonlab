@@ -88,16 +88,8 @@ def get_f0_sift(y, fs, f0_range = [63,400], pre = 0.94):
          f0df = get_f0(x, fs, f0_range= [63,400])
         
          ret = phon.sgram(x,fs,cmap='Blues') # draw the spectrogram from the array of samples
-         ax1 = ret[0]  # the first item returned, is the matplotlib axes of the spectrogram
-         ax2 = ax1.twinx()
+         ax2 = ret[0].twinx()    # the first item returned, is the matplotlib axes of the spectrogram
          ax2.plot(f0df.sec,f0df.f0, 'go')  
-
-    .. figure:: images/get_f0.png
-       :scale: 90 %
-       :alt: a 'bluescale' spectrogram with red dots marking the f0
-       :align: center
-
-       Marking the f0 found by `phon.get_f0()`
 
    """
     # constants and global variables

@@ -9,17 +9,18 @@ from importlib.resources import files as res_files
 from ..utils.prep_audio_ import prep_audio
 
 def peak_rms(y):
-    """Return the peak rms amplitude
+    """
+Return the peak rms amplitude
 
-    The function uses the librosa.feature.rms to calculate an RMS contour from short time Fourier transforms taken from windows of 2048 samples with a step of 512 samples (the librosa.stft defaults).  This makes for different window lengths (in terms of seconds) depending on the sampling rate.  
+The function uses the librosa.feature.rms to calculate an RMS contour from short time Fourier transforms taken from windows of 2048 samples with a step of 512 samples (the librosa.stft defaults).  This makes for different window lengths (in terms of seconds) depending on the sampling rate.  
 
-    Parameters
-    ==========
+Parameters
+==========
     y : ndarray
         a one-dimensional array of audio waveform samples
 
-    Returns
-    =======
+Returns
+=======
     float
         the maximum rms value in y
 
@@ -31,9 +32,10 @@ def peak_rms(y):
     return np.max(rms)
 
 def add_noise(x, fs, noise_type="white", snr = 0, target_amp = -2):
-    """Add noise to audio
+    """
+Add noise to audio
 
-    This function is partially adapted from matlab code written by Kamil Wojcicki, UTD, July 2011. It does the following:
+This function is partially adapted from matlab code written by Kamil Wojcicki, UTD, July 2011. It does the following:
 
     * pads the audio signal with 1/2 second of silence at the beginning and end
     * takes an audio file and mixes it with a noise (or a passed audio file) at a specified signal to noise ratio.

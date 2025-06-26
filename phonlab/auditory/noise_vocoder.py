@@ -67,7 +67,8 @@ def third_octave_bands(low = 100, high=5000):
     return[third_octave_bounds(cf) for cf in center_frequencies]
 
 def shannon_bands(nc = 24, low = 70, high = 5000):
-    """split a frequency range (low, high) into nc (number of channels) frequency bands on log freq scale
+    """
+    Split a frequency range (low, high) into nc (number of channels) frequency bands on log freq scale
 
     Parameters
     ==========
@@ -89,9 +90,10 @@ def shannon_bands(nc = 24, low = 70, high = 5000):
 
 
 def apply_filterbank(x, bands, fs = 22050, order = 8):
-    """ Apply a bank of bandpass filters
+    """ 
+Apply a bank of bandpass filters
     
-    Filter using repeated calls to scipy.signal.sosfiltfilt(), once for each of a bank of 8th order Butterworth bandpass filters.  The output array has one copy of x for each of the bands listed in the input "bands" parameter.
+Filter using repeated calls to scipy.signal.sosfiltfilt(), once for each of a bank of 8th order Butterworth bandpass filters.  The output array has one copy of x for each of the bands listed in the input "bands" parameter.
         
 Parameters
 ==========
@@ -124,7 +126,7 @@ Returns
 
 def vocode(x, fs, bands, target_fs = None):
     """ 
-    Noise vocoding - replace sound with bandpassed noise, using a bank of filters defined by bands.
+Noise vocoding - replace sound with bandpassed noise, using a bank of filters defined by bands.
 
 This module is based on the excellent vocoder notebook published by Alexandre Chabot-Leclerc ([@AlexChabotL](http://twitter.com/alexchabotl)).   https://github.com/achabotl/vocoder.git
 
@@ -153,10 +155,15 @@ Example
 
 .. code-block:: Python
 
-     x,fs = phon.loadsig(filename,chansel=[0])
-     bands = phon.shannon_bands(nc=7,high=8000)
-     y,fs = phon.vocode(x,fs, bands)
-     phon.sgram(y,fs_in=fs)
+    example_file = importlib.resources.files('phonlab') / 'data/example_audio/sf3_cln.wav'
+
+    bands_third = phon.third_octave_bands(high=8000)  # define filter bank
+    bands_shan = phon.shannon_bands(high=8000,nc=10)  # define filter bank
+
+    x,fs = phon.loadsig(example_file,chansel=[0])   
+    y,fs = phon.vocode(x, fs, bands_shan)  # use one of the filter banks
+
+    phon.sgram(y,fs)
 
 .. figure:: images/vocode.png
     :scale: 90 %

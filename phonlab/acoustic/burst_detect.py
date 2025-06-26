@@ -18,15 +18,17 @@ Parameters
 
 x : ndarray
       a one-dimensional array of waveform samples
-      
+
+fs : number
+      the sampling frequency of the audio in **x**.  The algorithm was trained on speech sampled at 16000 Hz, and will work best if you resample to 16000 with `phon.prep_audio()` before calling this function.  See the example.
+
 start :   float
       the time in seconds at the start of the waveform chunk in x
 
 end :   float
       the time in seconds at the end of the waveform chunk in x
 
-fs : number (default: 16000)
-      the sampling frequency of the audio in x 
+
 
 Returns
 =======
@@ -40,30 +42,27 @@ Returns
 Example
 =======
    
-In this example we open a sound file with `get_signal()` and then search for the best candidate for a stop release burst in the interval from time 1.5 seconds to time 2.0 seconds.  The return value `b_time` is the location of the burst in seconds, and `b_score` is a measure of the burst prominence.  The `sgram()` plot in this example illustrates the use of `start` and `end` to produce a spectrogram of a specified portion of signal.
+In this example we open a sound file with `phon.loasig()`, prepare it for the burst detector with `phon.prep_audio()` and then search for the best candidate for a stop release burst in the interval from time 1.5 seconds to time 2.0 seconds.  The return value `b_time` is the location of the burst in seconds, and `b_score` is a measure of the burst prominence.  The `sgram()` plot in this example illustrates the use of `start` and `end` to produce a spectrogram of a specified portion of signal.
 
 .. code-block:: Python
 
      x,fs = phon.loadsig("sf3_cln.wav", chansel=[0])
-     x,fs = phon.prep_audio(x,fs, pre=1, target_fs=None)  # add preemphasis, keep the fs of the file
+     x,fs = phon.prep_audio(x,fs, target_fs=16000, pre=0.94) 
     
      t1 = 1.5
      t2 = 2
     
-     b_time, b_score = phon.burst(x,t1,t2,fs)  # find a stop burst in the span from t1 to t2
+     b_time, b_score = phon.burst(x,fs,t1,t2,fs)  # find a stop burst in the span from t1 to t2
     
      ax1,f,t,Sxx = phon.sgram(x,fs_in=fs,start=t1, end=t2)
      ax1.axvline(b_time,color="red")
 
 .. figure:: images/burst.png
-   :scale: 55 %
+   :scale: 50 %
    :alt: a spectrogram with a red line marking the location of the burst
    :align: center
 
    Marking the burst found by `phon.burst()`
-
-   ..
-
 
 """
     n_fft = 1024
