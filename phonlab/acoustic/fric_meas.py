@@ -181,8 +181,8 @@ The figure here shows major peaks and COG in several different fricatives.
     Am = spec[index_of_main_peak]      # get amplitude
     AmpD = Am - np.min(spec[bottom_freq:index_of_main_peak])
 
-    Fsec = None
-    Asec = None
+    Fsec = np.nan
+    Asec = np.nan
     if len(peaks)>1:  
         index_of_second_peak = bottom_freq + peaks[1]
         Fsec = freq[index_of_second_peak]

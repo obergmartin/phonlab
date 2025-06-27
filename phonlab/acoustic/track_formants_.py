@@ -844,8 +844,8 @@ def IFC_tracking(x, fs, preemphasis = 0.94, f0_range = [63,400], speaker=0, quie
                               hop_length=step,center=False) # get rms amplitude
     rms = 20*np.log10(rms[0])
 
-    # apply preemphasis and convert to integer samples
-    y, fs = prep_audio(x,fs,pre=preemphasis,target_fs=fs,quiet=quiet) 
+    # apply preemphasis
+    y, fs = prep_audio(x,fs,pre=preemphasis,target_fs=fs,quiet=True) 
     
     filterbank = [design_filter(b, fs,order=12) for b in params[speaker]["bands"]]  
     time_axis = np.arange(len(y))/fs
