@@ -55,7 +55,7 @@ def get_rhythm_spectrum(x,fs):
 
     References
     ==========
-    Tilsen, S. & Johnson, K. (2008) Low-frequency Fourier analysis of speech rhythm. Journal of the Acoustical Society of America 124(2), EL34-EL39.
+    S. Tilsen & K. Johnson (2008) Low-frequency Fourier analysis of speech rhythm. `Journal of the Acoustical Society of America`, **124** (2), EL34-EL39.
     
     Example
     =======
@@ -125,7 +125,7 @@ Returns
 References
 ----------
     
-Tilsen, S. & Johnson, K. (2008) Low-frequency Fourier analysis of speech rhythm. Journal of the Acoustical Society of America 124(2), EL34-EL39.
+S. Tilsen & K. Johnson (2008) Low-frequency Fourier analysis of speech rhythm. `Journal of the Acoustical Society of America`, **124** (2), EL34-EL39.
     
 
 Example

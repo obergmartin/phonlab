@@ -108,8 +108,12 @@ def sgram(x,fs,chan=0,start=0,end=-1, tf=8000, band='wb',
     Then add a vertical red line at time 1.71
 
     .. code-block:: Python
-    
-        example_file = importlib.resources.files('phonlab') / 'data/example_audio/sf3_cln.wav'
+
+        import matplotlib.pyplot as plt
+
+        audio_dir = importlib.resources.files('phonlab') / 'data' / 'example_audio'
+        example_file = audio_dir / 'sf3_cln.wav'
+        
         x,fs = phon.loadsig(example_file,chansel=[0])
         phon.sgram(x,fs,start=1.5, end=2.0)
         plt.axvline(1.71,color="red")
@@ -125,11 +129,13 @@ def sgram(x,fs,chan=0,start=0,end=-1, tf=8000, band='wb',
     sine wave speech, and then plot a spectrogram of the resulting signal.
 
     .. code-block:: Python
-    
-         x,fs = phon.loadsig(example_file, chansel=[0]) 
-         fmtsdf = phon.track_formants(x,fs)    # track the formants
-         x2,fs2 = phon.sine_synth(fmtsdf)     # use the formants to produce sinewave synthesis
-         ax1,f,t,Sxx = phon.sgram(x2,fs2, band="nb", preemph=0)  # plot a spectrogram of it
+
+        example_file = importlib.resources.files('phonlab') / 'data' / 'example_audio' / 'sf3_cln.wav'
+
+        x,fs = phon.loadsig(example_file, chansel=[0]) 
+        fmtsdf = phon.track_formants(x,fs)    # track the formants
+        x2,fs2 = phon.sine_synth(fmtsdf)     # use the formants to produce sinewave synthesis
+        ax1,f,t,Sxx = phon.sgram(x2,fs2, band="nb", preemph=0)  # plot a spectrogram of it
 
     .. figure:: images/sine_synth.png
        :scale: 40 %

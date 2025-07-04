@@ -77,19 +77,21 @@ def get_f0_sift(y, fs, f0_range = [63,400], pre = 0.94):
 
     References
     ==========
-    Markel, J. (1972) The SIFT algorithm for fundamental frequency estimation. `IEEE Transactions on Audio and Electroacoustics`, 20(5), 367 - 377
+    J. Markel (1972) The SIFT algorithm for fundamental frequency estimation. `IEEE Transactions on Audio and Electroacoustics`, 20(5), 367 - 377
 
     Example
     =======
 
     .. code-block:: Python
-    
-         x,fs = phon.loadsig("sf3_cln.wav",chansel=[0])
-         f0df = get_f0(x, fs, f0_range= [63,400])
+
+        example_file = importlib.resources.files('phonlab') / 'data' / 'example_audio' / 'sf3_cln.wav'
+
+        x,fs = phon.loadsig(example_file,chansel=[0])
+        f0df = get_f0(x, fs, f0_range= [63,400])
         
-         ret = phon.sgram(x,fs,cmap='Blues') # draw the spectrogram from the array of samples
-         ax2 = ret[0].twinx()    # the first item returned, is the matplotlib axes of the spectrogram
-         ax2.plot(f0df.sec,f0df.f0, 'go')  
+        ret = phon.sgram(x,fs,cmap='Blues') # draw the spectrogram from the array of samples
+        ax2 = ret[0].twinx()    # the first item returned, is the matplotlib axes of the spectrogram
+        ax2.plot(f0df.sec,f0df.f0, 'go')  
 
    """
     # constants and global variables
@@ -178,8 +180,7 @@ The columns in the returned dataframe are for each frame of audio:
 References
 ==========
 
-Drugman, Thomas & Alwan, Abeer (2011) Joint robust voicing detection 
-and pitch estimation based on residual harmonics. ISCA (Florence, Italy) pp. 1973ff
+T. Drugman, A. Alwan (2011) Joint robust voicing detection and pitch estimation based on residual harmonics. 'ISCA (Florence, Italy)' pp. 1973ff
 
     
     """
@@ -343,8 +344,8 @@ def get_f0_acd(y, fs, prom=14, f0_range=[60,400], min_height = 0.6, test_time=-1
 
 This function implements the 'approximate common denominator" algorithm proposed by Aliik, Mihkla and Ross (1984), which was an improvement on the method proposed by Duifuis, Willems and Sluyter (1982).  The algorithm finds candidate harmonic peaks in the spectrum, and chooses a value of f0 that best predicts the harmonic pattern.  One feature of this method is that it reports a voice quality measure (the difference in the amplitudes of harmonic 1 and harmonic 2).
 
-Probability of voicing is given from a logistic regression formula using `rms` and Duifuis et al.'s `c` parameter trained to predict the voicing state as determined by EGG data using the function `phonlab.egg_to_oq()` over the 10 speakers in the ASC corpus of Mandarin speech. The prediction of the EGG voicing decision was about 86% correct.
-Aliik et al. (1984) used a cutoff of C<3.5 as a voicing threshold.
+Probability of voicing is given from a logistic regression formula using `rms` and Duifuis et al.'s harmonicity criterion `c`  to predict the voicing state as determined by EGG data using the function `phonlab.egg_to_oq()` over the 10 speakers in the ASC corpus of Mandarin speech. The prediction of the EGG voicing decision was about 86% correct.
+Aliik et al. (1984) used a cutoff of c < 3.5 as a voicing threshold.
 
 Parameters
 ==========
@@ -371,8 +372,16 @@ Note
         * f0 - estimate of the fundamental frequency
         * rms - rms amplitude in a low frequency band from 0 to 1200 Hz
         * h1h2 - the difference in the amplitudes of the first two harmonics (H1 - H2) in dB
+        * c - harmonicity criterion (lower values indicate stronger harmonic pattern)
         * probv - estimated probability of voicing
         * voiced - a boolean, true if probv>0.5
+
+References
+==========
+
+J. Allik, M. Mihkla, J. Ross (1984) Comment on "Measurement of pitch in speech: An implementation of Goldstein's theory of pitch perception" [JASA 71, 1568 (1982)].  `JASA` 75(6), 1855-1857.
+
+H. Duifhuis & L.F. Willems (1982) Measurement of pitch in speech: An implementation of Goldstein's theory of pitch perception.  `JASA` 71(6), 1568-1580.
 
 Example
 =======

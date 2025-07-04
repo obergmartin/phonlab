@@ -72,7 +72,7 @@ Returns
 =======
      
     Fm : float
-        Frequency of the first main spectral peak in Hertz.  A measure correlated with the length of the front tube.
+        Frequency (in Hz) of the first main spectral peak.  A measure correlated with the length of the front tube.
     Am : float
         Amplitude (in dB) at Fm
     AmpD : float
@@ -92,21 +92,26 @@ Returns
     Kurtosis : float
         scaled fourth moment, kurtosis
     spec : ndarray
-        the multi-taper power spectrum at the midpoint
+        the multi-taper power spectrum at the midpoint (e.g. for use in plotting spectra)
     freq : ndarray
-        the frequency scale of the spectrum
+        the frequency scale of the spectrum (e.g. for use in plotting spectra)
 
 
 Note
-----
+====
 
-    The major peaks analysis implemented here draws on ideas from Shadle (2023) and Shadle et al. (2023), and moments analysis was introduced for analysis of stop release bursts by Forrest et al. (1988).
-    
-    Shadle, Christine H.  (2023) Alternatives to moments for characterizing fricatives: Reconsidering Forrest et al. (1988). `J. Acoust. Soc. Am.` 153 (2): 1412–1426. https://doi.org/10.1121/10.0017231
+    The major peaks analysis implemented here draws on ideas from Shadle (2023) and Shadle et al. (2023).   Moments analysis was introduced for analysis of stop release burst spectra by Forrest et al. (1988).
 
-    Shadle. Christine H.; Chen, Wei-Rong; Koenig, Laura L.; Preston, Jonathan L. (2023) Refining and extending measures for fricative spectra, with special attention to the high-frequency range. `J. Acoust. Soc. Am.` 154 (3): 1932–1944. https://doi-org.libproxy.berkeley.edu/10.1121/10.0021075
 
-    Forrest, K., Weismer, G., Milenkovic, P., and Dougall, R. N. (1988). Statistical analysis of word-initial voiceless obstruents: Preliminary data. `J. Acoust. Soc. Am.` 84(1), 115–123.
+References
+==========
+
+    K. Forrest, G. Weismer, P. Milenkovic, and R.N. Dougall (1988). Statistical analysis of word-initial voiceless obstruents: Preliminary data. `J. Acoust. Soc. Am.` 84(1), 115–123.
+
+    C. Shadle (2023) Alternatives to moments for characterizing fricatives: Reconsidering Forrest et al. (1988). `J. Acoust. Soc. Am.` 153 (2): 1412–1426. https://doi.org/10.1121/10.0017231
+
+    C. Shadle, W-R. Chen, L.L. Koenig, J.L. Preston (2023) Refining and extending measures for fricative spectra, with special attention to the high-frequency range. `J. Acoust. Soc. Am.` 154 (3): 1932–1944. https://doi-org.libproxy.berkeley.edu/10.1121/10.0021075
+
 
 
 Example

@@ -74,10 +74,9 @@ exitflag: logical
 References
 ----------
 
-Garcia D. (2010) Robust smoothing of gridded data in one and higher dimensions with missing values. `Computational Statistics & Data Analysis` 54, 1187-1178. http://www.biomecardio.com/publis/csda10.pdf
+D. Garcia (2010) Robust smoothing of gridded data in one and higher dimensions with missing values. `Computational Statistics & Data Analysis` **54** , 1187-1178. http://www.biomecardio.com/publis/csda10.pdf
 
-Garcia D. (2011) A fast all-in-one method for automated post-processing of PIV data. `Exp Fluids`, 50:1247-1259.
-http://www.biomecardio.com/publis/expfluids11.pdf
+D. Garcia (2011) A fast all-in-one method for automated post-processing of PIV data. `Exp Fluids`, **50** , 1247-1259. http://www.biomecardio.com/publis/expfluids11.pdf
 
 Examples
 --------

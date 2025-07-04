@@ -39,12 +39,12 @@ Returns
 
 Note
 ====
-By default, this function will return audio with a sampling rate of 22050Hz and scaled to be in the range from [1,-1]
+By default, this function will return audio with a sampling rate of 32 kHz and scaled to be in the range from [1,-1]
 
 Example
 =======
 Open a sound file and prepare it for acoustic analysis.  By default, prep_audio() will 
-resample the audio to a sampling rate of 22050, and scale the waveform to use the full range.
+resample the audio to a sampling rate of 32000, and scale the waveform to use the full range.
 In this example, we have also asked the function to apply a preemphasis factor of 1 (about 6dB/octave).
 
 .. code-block:: Python

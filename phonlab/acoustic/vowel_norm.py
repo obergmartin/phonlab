@@ -24,7 +24,7 @@ deltaF or VTL: numeric
 References
 ==========
 
-Johnson, K. (2020) The Delta F method of vocal tract length normalization for vowels. `Laboratory Phonology`, 11(1), 10. DOI: http://doi.org/10.5334/labphon.196
+K. Johnson (2020) The Delta F method of vocal tract length normalization for vowels. `Laboratory Phonology`, 11(1), 10. DOI: http://doi.org/10.5334/labphon.196
 
 Example
 =======
@@ -55,7 +55,7 @@ groupby: string, default=None
     If `df` contains data from more than one talker, the talker identity should be indicated in a column and the name of that column passed in this input variable.
 
 deltaF: numeric or None, default=None
-    Supply a value of deltaF to be used for the normalization.  By default the deltaF normalization factor is computed by the function phon.get_deltaF(). 
+    Supply a value of deltaF to be used for the normalization.  By default the deltaF normalization factor is computed by the function phon.get_deltaF() over the data in the DataFrame you pass in. 
 
 Note
 ====
@@ -65,7 +65,7 @@ Nothing is returned by this function.  The input dataframe is modified in place 
 References
 ==========
 
-Johnson, K. (2020) The Delta F method of vocal tract length normalization for vowels. `Laboratory Phonology`, 11(1), 10. DOI: http://doi.org/10.5334/labphon.196
+K. Johnson (2020) The Delta F method of vocal tract length normalization for vowels. `Laboratory Phonology`, 11(1), 10. DOI: http://doi.org/10.5334/labphon.196
 
 Example
 =======

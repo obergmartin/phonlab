@@ -39,7 +39,7 @@ def amplitude_envelope(x, fs, bounds = [], target_fs=22050, cutoff=30, order=2 )
     
     .. code-block:: Python
 
-         x,fs = phon.loadsig(mywavefile,chansel=[0])
+         x,fs = phon.loadsig(example_file,chansel=[0])
          hband, fs = phon.amplitude_envelope(x,fs,bounds=[3000,8000])
          lband, fs = phon.amplitude_envelope(x,fs,bounds=[120,3000])
          diff = lband-hband

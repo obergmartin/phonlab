@@ -125,7 +125,7 @@ class Audspec(object):
 
         References
         ----------
-        Patterson, R.D. (1976) Auditory filter shapes derived with noise stimuli. JASA 59, 640-54.
+        R. D. Patterson (1976) Auditory filter shapes derived with noise stimuli. `JASA` **59** , 640-54.
         """
         
         cbfilts = np.zeros([len(self.freqs), len(self.sgram)])
@@ -213,7 +213,8 @@ preemp : float, default = 1.0
 
 References
 ----------
-    Patterson, R.D. (1976) Auditory filter shapes derived with noise stimuli. J. Acoust. Soc. Am. 59, 640-54.
+
+R. D. Patterson (1976) Auditory filter shapes derived with noise stimuli. `J. Acoust. Soc. Am.` **59** , 640-54.
         '''
         
         x, fs = prep_audio(x, fs = fs, target_fs = self.fs, pre = preemph)

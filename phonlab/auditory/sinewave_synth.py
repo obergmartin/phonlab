@@ -40,7 +40,9 @@ Returns
 
 References
 ==========
-Remez, R. E.; Rubin, P. E.; Pisoni, D. B.; Carrell, T. D. (1981). "Speech perception without traditional speech cues". Science. 212 (4497): 947–950. doi:10.1126/science.7233191.
+
+R. E. Remez, P.E. Rubin, D.B. Pisoni & T.D. Carrell (1981) Speech perception without traditional speech cues. `Science` **212** (4497), 947–950. doi:10.1126/science.7233191
+
 
 Example
 =======

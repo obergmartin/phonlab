@@ -14,9 +14,6 @@ def egg_to_oq(x, fs, hop_dur = 0.005, f0_range = [60,400],
     file).  OQ is calcuated with the 'hybrid' method (Herbst, 2020). Preprocessing 
     filtering method follows Rothenberg (2002).
     
-    Christian T. Herbst (2020) "Electroglottography − An Update." *Journal of Voice* , **34** (4), pp. 503-526.
-
-    Rothenberg, Martin (2002) Correcting low-frequency phase distortion in electroglottograph waveforms. *Journal of Voice* , **16** (1), 32-36. 
 
     Parameters
     ==========
@@ -48,6 +45,14 @@ def egg_to_oq(x, fs, hop_dur = 0.005, f0_range = [60,400],
             * sec - midpoint times (seconds) of the analysis frames in f0 and OQ
             * OQ - the glottal open quotient as a function of time.
             * f0 - estimates of the fundamental frequency of voicing as a function of time
+
+    References
+    ==========
+
+    C. T. Herbst (2020) Electroglottography − An Update. *Journal of Voice* , **34** (4), pp. 503-526.
+
+    M. Rothenberg (2002) Correcting low-frequency phase distortion in electroglottograph waveforms. *Journal of Voice* , **16** (1), 32-36. 
+    
 
     Example
     =======

@@ -875,7 +875,7 @@ The function uses either LPC analysis or the IFC method to calculate vowel forma
 
 The IFC option uses the Watenabe/Ueda Inverse Filter Control method of vowel formant tracking (Watenabe, 2001; Ueda et al., 2007).  This method can be quite a bit more accurate than LPC, but is also substantially slower. In addition to calculating formants, the function uses the estimated formant frequencies to inverse filter the waveform and then calculate f0 (voice pitch) from the quasi glottal waveform using autocorrelation. The peak autocorrelation values are normalized and returned as a voicing score between 0 and 1.  Finally, the RMS amplitude of the preemphasised waveform is also returned.  
 
-The LPC option uses the Librosa implemenation of linear predictive coding (Markel & Gray) and then polynomial root solving to find the vowel formant frequencies. The function also uses the LPC coefficients to inverse filter the waveform and then calculate f0 (voice pitch) from the quasi glottal waveform using autocorrelation. The peak autocorrelation value of each frame is also returned.  Finally, the RMS amplitude of the preemphasised waveform is also returned.  
+The LPC option uses the Librosa implemenation of Burg's (1975) autocorrelation method for linear predictive coding and then polynomial root solving to find the vowel formant frequencies. The function also uses the LPC coefficients to inverse filter the waveform and then calculate f0 (voice pitch) from the quasi glottal waveform using autocorrelation. The peak autocorrelation value of each frame is also returned.  Finally, the RMS amplitude of the waveform is also returned.  
 
 Parameters
 ==========
@@ -929,9 +929,14 @@ The columns in the output dataframe are:
 
 References
 ==========
-Watenabe, A. (2001) Formant estimation method using inverse-filter control. *IEEE Trans. Speech Audio Processing*, **9**, 317-326.
 
-Ueda, Y., Hamakawa, T., Sakata, T., Hario, S., & Watanabe, A. (2007). A real-time formant tracker based on the inverse filter control method. *Acoustical Science and Technology*,  **28** (4), 271–274. https://doi.org/10.1250/ast.28.271
+J. P. Burg (1975) `Maximum entropy spectral analysis`, Ph.D. dissertation, Dep. Geophys., Stanford Univ., Stanford, CA.
+
+A. Watenabe (2001) `Formant estimation method using inverse-filter control`. IEEE Trans. Speech Audio Processing, **9**, 317-326.
+
+Y. Ueda, T. Hamakawa, T. Sakata, S. Hario, & A. Watanabe (2007) `A real-time formant tracker based on the inverse filter control method`. Acoustical Science and Technology,  **28** (4), 271–274. https://doi.org/10.1250/ast.28.271
+
+
 
 Examples
 ========
