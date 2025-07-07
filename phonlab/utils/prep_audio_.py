@@ -1,7 +1,8 @@
 __all__=['prep_audio']
 
 import numpy as np
-from scipy.signal import resample
+from scipy.signal import resample_poly
+
 
 def prep_audio(x, fs, target_fs=32000, pre = 0, scale = True, outtype = "float", quiet = False):
     """ Prepare an array of audio waveform samples for acoustic analysis. 
@@ -62,18 +63,23 @@ Take the right channel, and resample to 16,000 Hz
     print(f'the new sampling rate is: {fs}')
 
     """
-
+    
     if target_fs == None:
         target_fs = fs
         x2 = x
     else:  # resample to 'target_fs' samples per second
-        if not quiet: 
-            print(f'Resampling from {fs} to {target_fs}')
-            if target_fs > fs:
-                print("WARNING: upsampling can negatively impact some analyses")
-        resample_ratio = target_fs/fs
-        new_size = int(len(x) * resample_ratio)  # size of the resampled version
-        x2 = resample(x,new_size)  # now sampled at desired sampling freq
+        if target_fs==fs:
+            x2 = x
+        else:
+            if not quiet: 
+                print(f'Resampling from {fs} to {target_fs}')
+            cd = np.gcd(fs,target_fs)    
+            x2 = resample_poly(x,up=target_fs/cd, down=fs/cd)
+        
+    
+        #resample_ratio = target_fs/fs
+        #new_size = int(len(x) * resample_ratio)  # size of the resampled version
+        #x2 = resample(x,new_size)  # now sampled at desired sampling freq
         
         
     if (np.max(x2) + np.min(x2)) < 0:  x2 = -x2   #  set the polarity of the signal

@@ -354,7 +354,7 @@ R. D. Patterson (1976) Auditory filter shapes derived with noise stimuli. `J. Ac
         float_t=np.float32
         int_t=np.int32
         super(Audspec, self).__init__()
-        self.fs = float_t(fs)
+        self.fs = fs 
         self.dft_n = 2**(int_t(np.log2(0.05*fs)))  # choose fft size based on fs
         spect_points = int_t(self.dft_n/2) + 1
         self._topbark = self.hz2bark(self.fs/2.0)

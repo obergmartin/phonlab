@@ -95,7 +95,7 @@ def get_f0_sift(y, fs, f0_range = [63,400], pre = 0.94):
 
    """
     # constants and global variables
-    frame_length_sec = 0.04
+    frame_length_sec = 0.04  # 40 ms frame
     step_sec = 0.005
     
     x, fs = prep_audio(y, fs, target_fs=16000, pre = 0, quiet=True)  # no preemphasis, for RMS calc
@@ -184,7 +184,7 @@ T. Drugman, A. Alwan (2011) Joint robust voicing detection and pitch estimation 
 
     
     """
-    frame_length_sec = 0.04
+    frame_length_sec = 0.04  # 40 ms frame
     step_sec = 0.005
     fs_khz = 10
     
@@ -263,11 +263,11 @@ def get_f0_ac(y, fs, f0_range = [60,400]):
     """
 
     # constants and global variables
-    frame_length_sec = 1/f0_range[0]
+    frame_length_sec = (1/f0_range[0]) * 2.5  # enough for 2 1/2 periods at lowest f0
     step_sec = 0.005
 
-    # no preemphasis, up-sample
-    x, fs = prep_audio(y, fs, target_fs = 24000, pre = 0, quiet=True)  
+    # no preemphasis, target sample rate, scale to full amplitude
+    x, fs = prep_audio(y, fs, target_fs = 24000, pre = 0, quiet=False)  
 
     frame_length = int(fs * frame_length_sec) 
     half_frame = frame_length//2
