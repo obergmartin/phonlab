@@ -1,4 +1,4 @@
-__all__=['get_rms','get_f0_sift','get_f0_srh','get_f0_ac','get_f0_acd']
+__all__=['get_rms','get_f0_B93', 'get_f0_sift','get_f0_srh','get_f0_ac','get_f0_acd']
 
 import numpy as np
 from scipy.signal import windows, find_peaks, spectrogram, peak_prominences, fftconvolve
@@ -45,6 +45,124 @@ def get_rms(y, fs, scale=False):
     sec = (np.array(range(nb)) * step + half_frame).astype(int)/fs
 
     return DataFrame({'sec': sec, 'rms':rms})
+
+
+def get_f0_B93(y, fs, f0_range = [60,400]):
+    """Track the fundamental frequency of voicing (f0), using a time domain method.
+
+    This function implements the autocorrelation method described in Boersma (1993). where 
+    the autocorrelation function is normalized by the autocorrelation of the 
+    analysis window. The raw best fit frame-by-frame values are returned -- that is, this 
+    function does not follow Boersma (1993) in using the Viterbi algorithm to choose the 
+    optimal path among f0 candidates.
+
+    The Harmonics-to-Noise ratio (HNR) in each frame is estimated from the peak of the 
+    autocorreation function (c) as `10 * log10(c/(1-c))`.
+
+    A Boolean voicing decision is based on the addition of the (centered) rms amplitude 
+    and the HNR estimuate, with this formula: `(rms - mean(rms)) + HNR`.  If 
+    the quantity is greater than 4dB the voiced value is `True`.
+
+
+    Parameters
+    ==========
+        y : ndarray
+            A one-dimensional array of audio samples
+        fs : int
+            Sampling rate of **x**
+        f0_range : list of two integers, default = [63,400]
+            The lowest and highest values to consider in pitch tracking.
+
+    Returns
+    =======
+        df: pandas DataFrame  
+            measurements at 5 msec intervals.
+
+    Note
+    ====
+    The columns in the returned dataframe are for each frame of audio:
+        * sec - time at the midpoint of each frame
+        * f0 - estimate of the fundamental frequency
+        * rms - peak normalized rms amplitude in the band from 0 to fs/2
+        * c - value of the peak autocorrelation found in the frame
+        * HNR - an estimate of the harmonics to noise ratio
+        * voiced - a boolean, true if both rms and HNR are high
+
+    References
+    ==========
+    P. Boersma (1993) Accurate short-term analysis of the fundamental frequency and the harmonics-to-noise ratio of a sampled sound. `Institute of Phonetic Sciences, Amsterdam University, Proceedings`. **17**, 97-110.
+
+
+    .. figure:: images/get_f0_B93.png
+        :scale: 33 %
+        :alt: a spectrogram with three pitch traces compared - get_f0_acd, get_f0_B93, praat
+        :align: center
+
+        Comparing the f0 found by `phon.get_f0_B93()` plotted in blue, and the f0 values found by `parselmouth` `to_Pitch()`, plotted with chartreuse dots, and the f0 values found by get_f0_acd, plotted in orange.  The traces are offset from each other by 10Hz so they can be seen.
+
+    """
+
+    target_fs = None  # use native sampling rate
+
+    x, fs = prep_audio(y, fs, target_fs = target_fs, pre = 0.0, quiet=True)  
+    
+    # ---- setup constants and global variables -----
+    step_sec = 0.005
+    step = int(fs * step_sec)  # number of samples between frames
+    s_lag = int((1/f0_range[1])*fs) # shortest lag
+    l_lag = int((1/f0_range[0])*fs) # longest lag
+    frame_length = int(l_lag * 3)  # room for 3 periods (6 for HNR)
+    half_frame = frame_length//2
+    N = 1024
+    while (frame_length+frame_length//2 > N): N = N * 2  # increase fft size if needed
+
+    # ----- split into frames --------
+    frames = util.frame(x, frame_length=frame_length, hop_length=step,axis=0)    
+    nb = frames.shape[0]
+    f = frames.shape[1]  # number of frequency steps
+    
+    # ----- Hann window and its autocorrelation ----------
+    w = np.hanning(frame_length)
+    s = fft.fft(w,N)
+    rw = fft.fft(np.square(np.abs(s)),N) + 10
+    rw = rw/np.max(rw)
+
+    # ------- autocorrelations of all of the frames in the file -----------
+    Sxx = fft.fft(w*frames,N)
+    ra = fft.fft(np.square(np.abs(Sxx)),N)
+    ra = np.divide(ra.T,np.max(ra,axis= -1)).T  # frame by frame normalization
+
+    # ------ normalized autocorrelations ------------
+    rx = ra/rw
+
+    # ------ find best lag in each frame -------
+    lag = np.array([s_lag + np.argmax(rx[i,s_lag:l_lag]) for i in range(nb)])
+
+    # ---- compute columns for Dataframe -------
+    sec = (np.array(range(nb)) * step + half_frame)/fs
+    f0 = 1/(lag/fs)  # convert lags into f0
+    rms = 10 * np.log10(np.sqrt(np.divide(np.sum(np.square(np.abs(Sxx)),axis=1),f))) 
+    c = np.array([np.abs(np.max(rx[i,s_lag:l_lag])) for i in range(nb)])
+    HNR = 10 * np.log10(c/(1-c))
+    Voiced = ((rms - np.mean(rms)) + HNR) > 4
+
+    """
+    # example from a frame -- pick a time manually
+    t = 0.65
+    i = int(((t*fs)- frame_length//2) /step)
+    lag = s_lag + np.argmax(rx[i,s_lag:l_lag])
+    f0_ = 1/(lag/fs)
+    c_ = np.abs(np.max(rx[i,s_lag:l_lag]))
+    print(f"t={t}: f0_ = {f0_}, c_ = {c_}, lag = {lag}, N = {N}, flen = {frame_length}, fs = {fs}")
+    plt.plot(rx[i,:N//4])
+    plt.plot(ra[i,:N//4])
+    plt.plot(rw[:N//4])
+    plt.axvline(s_lag,color="grey",linestyle=":")
+    plt.axvline(l_lag,color="grey",linestyle=":")
+    plt.axvline(lag,color="black",linestyle="--")
+    """
+    return DataFrame({'sec': sec, 'f0':f0, 'rms':rms, 'c':c, 'HNR': HNR, 'voiced': Voiced})
+
 
 def get_f0_sift(y, fs, f0_range = [63,400], pre = 0.94):
     """Track the fundamental frequency of voicing (f0), using a time-domain method.

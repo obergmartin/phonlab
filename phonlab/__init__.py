@@ -1,5 +1,5 @@
 __name__="phonlab"
-__version__="0.0.27"
+__version__="0.0.28"
 
 # -------- functions in the "acoustic" portion of the package -------
 from .acoustic.sgram_ import *

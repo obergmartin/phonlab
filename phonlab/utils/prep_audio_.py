@@ -73,7 +73,7 @@ Take the right channel, and resample to 16,000 Hz
         else:
             if not quiet: 
                 print(f'Resampling from {fs} to {target_fs}')
-            cd = np.gcd(fs,target_fs)    
+            cd = np.gcd(fs,target_fs)   # common denominator   
             x2 = resample_poly(x,up=target_fs/cd, down=fs/cd)
         
     
