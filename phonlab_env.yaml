@@ -18,4 +18,5 @@ dependencies:
       - colorednoise==2.2
       - praat-parselmouth==0.4.5
       - phonlab
+      - fileorganize
 
