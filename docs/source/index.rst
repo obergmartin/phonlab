@@ -1,7 +1,6 @@
-Welcome to phonlab!
-=====================================
-
-This is a collection of python functions for doing phonetics.
+Phonlab 
+=======
+A collection of python functions for doing Phonetics.
 
 The package is divided into functions for :doc:`acoustphon`, to calculate acoustic measures of vowels, stops and
 fricatives, tone and intonation.  In addition there are functions relating to :doc:`articphon` and :doc:`audphon`, including several that modify speech for speech perception experiments, including speech in noise, noise vocoding, and sinewave synthesis.
@@ -15,6 +14,15 @@ Installation
 ------------
 
 >>> pip install phonlab
+
+
+How to Cite
+-----------
+
+If you use this software in published research please cite it in a way that directs readers to this documentation page. 
+
+
+    Phonlab Development Team (2025). `Phonlab: A collection of python functions for doing Phonetics`.  https://phonlab.readthedocs.io/ 
 
 
 Examples
