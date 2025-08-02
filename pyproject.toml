@@ -21,7 +21,8 @@ dependencies = [
     'colorednoise',
     'pandas',
     'librosa',
-    'praat-parselmouth'
+    'praat-parselmouth',
+    'tensorflow'
 ]
 classifiers = [
     'Programming Language :: Python :: 3',
