@@ -32,12 +32,14 @@ from .auditory.noise_vocoder import *
 from .auditory.add_noise_ import *
 from .auditory.sinewave_synth import *
 from .auditory.audspec import *
+from .auditory.mel_sgram import *
 
 __all__ += auditory.sigcor.__all__
 __all__ += auditory.noise_vocoder.__all__
 __all__ += auditory.add_noise_.__all__
 __all__ += auditory.sinewave_synth.__all__
 __all__ += auditory.audspec.__all__
+__all__ += auditory.mel_sgram.__all__
 
 # -------- functions in the 'articulatory' portion of the package -------
 from .artic.egg2oq_ import *

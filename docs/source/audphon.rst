@@ -3,7 +3,6 @@ Auditory Phonetics
 
 Signal Manipulation
 -------------------
-
 .. autofunction:: phonlab.add_noise
 .. autofunction:: phonlab.sigcor_noise
 .. autofunction:: phonlab.vocode
@@ -14,6 +13,7 @@ Signal Manipulation
 
 Auditory Representations
 ------------------------
+.. autofunction:: phonlab.compute_mel_sgram
 .. autofunction:: phonlab.mfcc_to_df
 .. autoclass:: phonlab.Audspec
     :members:
