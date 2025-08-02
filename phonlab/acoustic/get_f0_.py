@@ -5,7 +5,11 @@ from scipy.signal import windows, find_peaks, spectrogram, peak_prominences, fft
 from scipy import fft
 from librosa import feature, util, lpc
 from pandas import DataFrame
+from tensorflow.signal import overlap_and_add
+from scipy import linalg
+
 from ..utils.prep_audio_ import prep_audio
+from ..acoustic.lpc_residual import lpcresidual
 
 
 def get_rms(y, fs, scale=False):
@@ -164,7 +168,7 @@ def get_f0_B93(y, fs, f0_range = [60,400]):
     return DataFrame({'sec': sec, 'f0':f0, 'rms':rms, 'c':c, 'HNR': HNR, 'voiced': Voiced})
 
 
-def get_f0_sift(y, fs, f0_range = [63,400], pre = 0.94):
+def get_f0_sift(y, fs, f0_range = [63,400]):
     """Track the fundamental frequency of voicing (f0), using a time-domain method.
 
     The method in this function is an implementation of John Markel's (1972) simplified inverse filter tracking algorithm (SIFT) which is also used in track_formants().  LPC coefficients are calculated for each frame and the audio signal is inverse filtered with these, resulting in a quasi glottal waveform. Then autocorrelation is used to estimate the fundamental frequency.  Probability of voicing is given from a logistic regression formula using `rms` and `c` trained to predict the voicing state as determined by EGG data using the function `phonlab.egg_to_oq()` over the 10 speakers in the ASC corpus of Mandarin speech. The prediction of the EGG voicing decision was about 85% correct.
@@ -216,50 +220,179 @@ def get_f0_sift(y, fs, f0_range = [63,400], pre = 0.94):
     frame_length_sec = 0.04  # 40 ms frame
     step_sec = 0.005
     
-    x, fs = prep_audio(y, fs, target_fs=16000, pre = 0, quiet=True)  # no preemphasis, for RMS calc
+    x, fs = prep_audio(y, fs, target_fs=16000, pre = 0.94, quiet=True)  # no preemphasis, for RMS calc
 
     frame_length = int(fs * frame_length_sec) 
     half_frame = frame_length//2
     step = int(fs * step_sec)  # number of samples between frames
+    s_lag = int((1/f0_range[1])*fs) # shortest lag
+    l_lag = int((1/f0_range[0])*fs) # longest lag
+    N = 1024
+    while (frame_length+frame_length//2 > N): N = N * 2  # increase fft size if needed
 
+
+    # ----- compute the RMS amplitude --------
     rms = feature.rms(y=x,frame_length=frame_length, hop_length=step,center=False)
     rms = 20*np.log10(rms[0]/np.max(rms[0]))
 
-    if (pre > 0): x = np.append(x[0], x[1:] - pre * x[:-1])  # now apply pre-emphasis
+    # ------- compute f0 from the LPC residual signal ----------
+    resid,fs = lpcresidual(x,fs,target_fs=fs)
 
-    w = windows.hamming(frame_length)
-    frames = util.frame(x, frame_length=frame_length, hop_length=step,axis=0)    
-    frames = np.multiply(frames,w)   # apply a Hamming window to each frame, for lpc
-
+    frames = util.frame(resid, frame_length=frame_length, hop_length=step,axis=0)    
     nb = frames.shape[0]  # the number of frames (or blocks) in the LPC analysis
+    f = frames.shape[1]  # number of frequency steps
+        
+    # ----- Hann window and its autocorrelation ----------
+    w = np.hanning(frame_length)
+    s = fft.fft(w,N)
+    rw = fft.fft(np.square(np.abs(s)),N) + 10
+    rw = rw/np.max(rw)
+
+    # ------- autocorrelations of all of the frames in the file -----------
+    Sxx = fft.fft(w*frames,N)
+    ra = fft.fft(np.square(np.abs(Sxx)),N)
+    ra = np.divide(ra.T,np.max(ra,axis= -1)).T  # frame by frame normalization
+
+    rx = abs(ra/rw)  # normalize by window autocorrelation
+
+    # ------ find best lag in each frame -------
+    lag = np.array([s_lag + np.argmax(rx[i,s_lag:l_lag]) for i in range(nb)])
+    f0 = 1/(lag/fs)  # convert lags into f0
+
+    c = np.array(np.max(rx[i,s_lag:l_lag]) for i in range(nb))
+
+    # ---------- compute the time axis ----------------
+    sec = (np.array(range(nb)) * step + half_frame)/fs
+
+    return DataFrame({'sec': sec, 'f0':f0, 'rms':rms, 'c':c})
+
+
+def SRH(Sxx,fs,f0_range):   # this could be refactored to use matrices instead of loops
+    ''' test all of the f0 values (integers) between the min and max of the range
+    and choose the one with the greatest sum of residual harmonics in each frame of
+    the spectrogram.
+    '''
+
+    nb = Sxx.shape[0]
+    T = Sxx.shape[1]/fs
+    max_harmonic = 8
     f0 = np.empty(nb)
-    c = np.empty((nb))
-
-    sec = np.array([(i * (step/fs)+(frame_length_sec/2)) for i in range(nb)])  
-    A = lpc(frames, order=32,axis=-1)  # get LPC coefs, can use a largish order
-    xi = fftconvolve(frames,A,mode="same",axes=1) # inverse filter
-
-    th = fs//f0_range[1]
-    tl = fs//f0_range[0]
+    SRHval = np.empty((nb))
     
     for i in range(nb): 
-        cormat = np.correlate(xi[i], xi[i], mode='full') # autocorrelation 
-        ac = cormat[cormat.size//2:] # the autocorrelation is in the last half of the result
-        idx = np.argmax(ac[th:tl]) + th # index of peak correlation (in range lowest to highest)
-        f0[i] = 1/(idx/fs)      # converted to Hz
-        if (ac[0]<= 0) | (ac[idx] <= 0):  # avoid srt of a negative number
-            c[i] = 0
-        else:
-            c[i] = np.sqrt(ac[idx]) / np.sqrt(ac[0])
+        S = Sxx[i]
+        srh_max = 0
 
-    odds = np.exp(-0.3 + (0.13*rms[:nb]) + (6.46*c[:nb]))  # logistic formula, trained on ASC corpus
-    probv = odds / (1 + odds)
-    voiced = probv > 0.5
+        for f in range(f0_range[0], f0_range[1]):  # candidate f0 values
+            fT = f*T  # test this as frequency of H1
+            plus = 0
+            minus = 0
+            for k in range(1,max_harmonic):
+                plus += S[int(fT*k)] 
+                minus += S[int(fT*(k+0.5))]
+            srh = plus-minus 
+            if srh > srh_max:
+                srh_max = srh
+                f0[i] = f        
+        SRHval[i] = srh_max
+    return f0,SRHval
 
-    return DataFrame({'sec': sec, 'f0':f0, 'rms':rms, 'c':c, 'probv': probv, 'voiced':voiced})
+
+def get_f0_srh(y, fs, l = 0.06, s=0.01, f0_range = [60,400],vthresh=0.07):
+    """Track the fundamental frequency of voicing (f0), using a frequency domain method.
+
+This function is an implementation of Drugman and Alwan's (2011) "Summation of 
+Residual Harmonics" (SRH) method of pitch tracking.  The signal is downsampled to 
+10 kHz, and inverse filtered with LPC analysis to remove the influence of vowel 
+formants. Then harmonics are found in the spectrum of the residual signal.
+Drugman and Alwan found that this technique provides an estimate of F0 that is 
+robust when the audio signal is corrupted by noise. 
+
+The f0 range is adaptively adjusted and the result of this is returned by the function.
+If you have multiple recordings of the same person, it would speed things up to 
+make use of this return value.
+
+Parameters
+==========
+    y : string or ndarray
+        A one-dimensional array of audio samples
+    fs : int
+        Sampling rate of **x**
+    l : float, default = 0.06
+        Length of the pitch analysis window in seconds. The default is 60 milliseconds.  
+    s : float, default = 0.01
+        "Hop" interval between successive analysis windows. The default is 10 milliseconds
+    f0_range : list of two integers, default = [63,400]
+        The lowest and highest values to consider in pitch tracking. This algorithm is quite sensitive to the values given in this setting.
+    vthresh:  float, default = 0.07
+        A threshold on the SRH value for deciding if a frame is voiced.  Lower values make the routine more likely to call frames voiced.
+
+Returns
+=======
+    df : pandas DataFrame  
+        measurements at 5 msec intervals.
+    f0_range : a list of two integers
+        the adaptively adjusted f0 range
+
+Note
+====
+The columns in the returned dataframe are for each frame of audio:
+    * sec - time at the midpoint of each frame
+    * f0 - estimate of the fundamental frequency
+    * rms - peak normalized rms amplitude in the band from 0 to 5 kHz
+    * srh - value of SRH (normalized sum of the residual harmonics)
+    * voiced - a boolean decision based on the srh value (see Drugman and Alwan)
+
+References
+==========
+
+T. Drugman, A. Alwan (2011) Joint robust voicing detection and pitch estimation based on residual harmonics. 'ISCA (Florence, Italy)' pp. 1973ff
+
+    """
+
+    x,fs = prep_audio(y, fs, target_fs=16000, pre = 0, quiet=True)  # resample, preemphasis
     
+    frame_length = int(fs * l) 
+    half_frame = frame_length//2
+    step = int(fs * s)  # number of samples between frames
 
-def get_f0_srh(y, fs, f0_range = [60,400]):
+    # ----- get rms amplitude from audio wav -------------
+    rms = feature.rms(y=x,frame_length=frame_length, hop_length=step,center=False)
+    rms = 20*np.log10(rms[0]/np.max(rms[0]))
+
+    # ---- get the f0 from the sum of the residual harmonics (srh) -------------
+    resid,fs = lpcresidual(x,fs)  # get the lpc residual signal (remove vocal tract)
+
+    w = windows.hamming(frame_length)
+    frames = util.frame(resid, frame_length=frame_length, hop_length=step,axis=0)    
+    frames = np.multiply(frames,w)   # apply a Hamming window to each frame, for lpc
+    
+    Sxx = np.abs(np.fft.rfft(frames,2**14))           # spectrogram of the residual
+    Sxx = np.divide(Sxx.T,linalg.norm(Sxx,axis=-1)).T # amplitude normalized
+    
+    adjust_f0_range = True  # ---  recursive adjustment of the f0_range
+    oldF0med = 0   
+    while adjust_f0_range:
+        f0,SRHval =  SRH(Sxx,fs,f0_range)
+        if np.max(SRHval) > 0.1:  # there are some bad fitting frames
+            F0med = int(np.nanmedian(np.where(SRHval<0.1,f0,np.nan)))
+            if (F0med == oldF0med):
+                adjust_f0_range = False
+            oldF0med = F0med
+            f0_range[1] = int(F0med) + 100  # only adjusting the top end of the range
+        else:
+            adjust_f0_range = False
+
+    # ---------- get voicing decisions --------------
+    if np.std(SRHval) > 0.05: vthresh = vthresh*1.2
+    voiced = np.where(SRHval > vthresh,True,False)
+    
+    # ---- get the time at the center of each frame ---------------
+    sec = (np.array(range(frames.shape[0])) * step + half_frame).astype(int)/fs
+   
+    return DataFrame({'sec': sec, 'f0':f0, 'rms':rms, 'srh':SRHval, 'voiced': voiced}),f0_range
+
+'''def get_f0_srh(y, fs, f0_range = [60,400]):
     """Track the fundamental frequency of voicing (f0), using a frequency domain method.
 
 This function is an implementation of Drugman and Alwan's (2011) "Summation of 
@@ -349,6 +482,7 @@ T. Drugman, A. Alwan (2011) Joint robust voicing detection and pitch estimation 
     voiced = probv > 0.5
 
     return DataFrame({'sec': sec, 'f0':f0, 'rms':rms, 'srh':c, 'probv': probv, 'voiced':voiced})
+'''
 
 def get_f0_ac(y, fs, f0_range = [60,400]):
     """Track the fundamental frequency of voicing (f0), using a time domain method.

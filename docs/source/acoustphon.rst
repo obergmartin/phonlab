@@ -29,6 +29,11 @@ Pitch Tracking
 .. autofunction:: phonlab.get_f0_ac
 .. autofunction:: phonlab.pitch_to_df
 
+Voice Quality
+-------------
+.. autofunction:: phonlab.lpcresidual
+.. autofunction:: phonlab.gci_sedreams
+
 Consonant Features
 ------------------
 .. autofunction:: phonlab.fricative

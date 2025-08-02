@@ -1,5 +1,5 @@
 __name__="phonlab"
-__version__="0.0.28"
+__version__="0.0.29"
 
 # -------- functions in the "acoustic" portion of the package -------
 from .acoustic.sgram_ import *
@@ -11,6 +11,8 @@ from .acoustic.tidypraat import *
 from .acoustic.amp_env import *
 from .acoustic.rhythm import *
 from .acoustic.vowel_norm import *
+from .acoustic.lpc_residual import *
+from .acoustic.gci import *
 
 __all__ = acoustic.sgram_.__all__.copy()
 __all__ += acoustic.burst_detect.__all__
@@ -21,6 +23,8 @@ __all__ += acoustic.tidypraat.__all__
 __all__ += acoustic.amp_env.__all__
 __all__ += acoustic.rhythm.__all__
 __all__ += acoustic.vowel_norm.__all__
+__all__ += acoustic.lpc_residual.__all__
+__all__ += acoustic.gci.__all__
 
 # -------- functions in the "auditory" portion of the package ---------
 from .auditory.sigcor import *
