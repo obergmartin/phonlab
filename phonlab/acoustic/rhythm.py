@@ -88,7 +88,7 @@ def get_rhythm_spectrum(x,fs):
 
     # Downsample and remove DC component.
     y = rem_dc(scipy.signal.decimate(x, ds_factor, ftype = 'fir', zero_phase=True))
-    y = y * scipy.signal.tukey(len(y), 0.1)  # Shape downsampled signal with a Tukey window.
+    y = y * scipy.signal.windows.tukey(len(y), 0.1)  # Shape downsampled signal with a Tukey window.
     norm_frame = y / np.sqrt(np.var(y))  # Normalize to unit variance.
     freq, powsd = scipy.signal.periodogram(norm_frame,   # find frequency spectrum of the amplitude envelope
                                            fs=ds_rate, nfft=npoints, scaling="spectrum")

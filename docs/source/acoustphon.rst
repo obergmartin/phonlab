@@ -33,6 +33,8 @@ Voice Quality
 -------------
 .. autofunction:: phonlab.lpcresidual
 .. autofunction:: phonlab.gci_sedreams
+.. autofunction:: phonlab.compute_cepstrogram
+.. autofunction:: phonlab.CPP
 
 Consonant Features
 ------------------

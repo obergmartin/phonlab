@@ -22,7 +22,7 @@ Parameters
 ----------
 
 y : numeric or logical array
-    A uniformly-sampled array of input data array to be smoothe. **y** can be any N-D noisy array (time series, images, 3D data,...). Non-finite data (NaN or Inf) are treated as missing values.
+    A uniformly-sampled array of input data array to be smoothed. **y** can be any N-D noisy array (time series, images, 3D data,...). Non-finite data (NaN or Inf) are treated as missing values.
 
 isrobust: logical, default = False
     Use robust algorithm to minimize the influence of outlying data
@@ -163,11 +163,11 @@ Examples
     IsFinite = np.array(np.isfinite(y)).astype(bool);
     nof = IsFinite.sum() # number of finite elements
     W = W*IsFinite;
-    if any(W<0):
+    if np.any(W<0):
         error('smoothn:NegativeWeights',\
         'Weights must all be >=0')
 
-    isweighted = any(W != 1);   # Weighted or missing data?
+    isweighted = np.any(W != 1);   # Weighted or missing data?
     isauto = not s; # Automatic smoothing?
 
     ## Creation of the Lambda tensor
@@ -246,7 +246,7 @@ Examples
                   ss = np.arange(nS0)*(1./(nS0-1.))*(np.log10(sMaxBnd)-np.log10(sMinBnd))+ np.log10(sMinBnd)
                   g = np.zeros_like(ss)
                   for i,p in enumerate(ss):
-                    g[i] = gcv(p,Lambda,aow,DCTy,IsFinite,Wtot,y,nof,noe,smoothOrder)
+                      g[i] = gcv(p,Lambda,aow,DCTy,IsFinite,Wtot,y,nof,noe,smoothOrder)
                   xpost = [ss[g==g.min()]]
                 else:
                   xpost = [s0]
@@ -302,9 +302,7 @@ def warning(s1,s2):
 #---
 #function GCVscore = gcv(p)
 def gcv(p,Lambda,aow,DCTy,IsFinite,Wtot,y,nof,noe,smoothOrder):
-    # Search the smoothing parameter s that minimizes the GCV score
-    #---
-    #print("p=", p)
+    # Search for a smoothing parameter s that minimizes the GCV score
     s = 10**p;
     Gamma = 1./(1+(s*abs(Lambda))**smoothOrder);
     #--- RSS = Residual sum-of-squares
@@ -317,7 +315,7 @@ def gcv(p,Lambda,aow,DCTy,IsFinite,Wtot,y,nof,noe,smoothOrder):
         RSS = norm(np.sqrt(Wtot[IsFinite])*(y[IsFinite]-yhat[IsFinite]))**2;
 
     #---
-    TrH = sum(Gamma);
+    TrH = np.sum(Gamma); # np.sum() or sum()??
     GCVscore = RSS/float(nof)/(1.-TrH/float(noe))**2;
     return GCVscore
 

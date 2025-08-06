@@ -39,11 +39,11 @@ def get_rms(y, fs, scale=False):
     half_frame = frame_length//2
     step = int(fs * step_sec)  # number of samples between frames
 
-    rms = feature.rms(y=y,frame_length=frame_length, hop_length=step,center=False)
+    rms = feature.rms(y=y,frame_length=frame_length, hop_length=step,center=False)[0]
     if scale:
-        rms = 20*np.log10(rms[0]/np.max(rms[0]))
+        rms = 20*np.log10(rms/np.max(rms),where=np.where(rms>0,True,False,out=np.zeros(rms.shape)))
     else:
-        rms = 20*np.log10(rms[0])
+        rms = 20*np.log10(rms,where=np.where(rms>0,True,False,out=np.zeros(rms.shape)))
 
     nb = rms.shape[0]  # the number of frames
     sec = (np.array(range(nb)) * step + half_frame).astype(int)/fs
@@ -147,7 +147,7 @@ def get_f0_B93(y, fs, f0_range = [60,400]):
     f0 = 1/(lag/fs)  # convert lags into f0
     rms = 10 * np.log10(np.sqrt(np.divide(np.sum(np.square(np.abs(Sxx)),axis=1),f))) 
     c = np.array([np.abs(np.max(rx[i,s_lag:l_lag])) for i in range(nb)])
-    HNR = 10 * np.log10(c/(1-c))
+    HNR = 10 * np.log10(c/(1-c),where=np.where(c<1,True,False),out=np.zeros(c.shape))
     Voiced = ((rms - np.mean(rms)) + HNR) > 4
 
     """

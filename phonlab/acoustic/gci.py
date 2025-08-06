@@ -92,10 +92,9 @@ The columns in the returned DataFrame are:
 
 References
 ==========
+    T. Drugman, T. Dutoit (2009) Glottal Closure and Opening Instant Detection from Speech Signals, Interspeech09, Brighton, U.K.
 
-    Drugman, T., Dutoit, T. (2009) Glottal Closure and Opening Instant Detection from Speech Signals, Interspeech09, Brighton, U.K.
-
-    Drugman, T., Thomas, M., Gudnason, J., Naylor, P., Dutoit, T. (2012) Detection of Glottal Closure Instants from Speech Signals: a Quantitative Review, IEEE Transactions on Audio, Speech and Language Processing, vol. 20, Issue 3, pp. 994-1006.
+    T. Drugman, M. Thomas, J. Gudnason, P. Naylor, T. Dutoit (2012) Detection of Glottal Closure Instants from Speech Signals: a Quantitative Review, IEEE Transactions on Audio, Speech and Language Processing, vol. 20, Issue 3, pp. 994-1006.
 
 
 Example
