@@ -88,7 +88,7 @@ Note
 The columns in the returned DataFrame are:
     * sec - the time points (in seconds) of each glottal closure instant. These are the GCI values.
     * f0 - pitch of voicing, which is `1/t`, where `t` is the glottal period - the duration between adjacent GCI
-    * jitter - the relative discrepancy between adjacent values of t (call them t1 and t2). The value is calculated as `j = 2 * |0.5 - t1/(t1+t2)|`. This results in values on a scale from 0 (adjacent periods (t) are equal in duration), to 1 (the theoretical limit of jitter).  A value of 0.5 means that t1 is twice (or 1/2) as long as t2.
+    * jitter - the relative discrepancy between adjacent glottal period durations (call them t1 and t2). The value is calculated as `j = 2 * |0.5 - t1/(t1+t2)|`. This results in values on a scale from 0 (adjacent periods (t) are equal in duration), to 1 (the theoretical limit of jitter).  A value of 0.5 means that t1 is twice (or 1/2) as long as t2.  This corresponds to 1/2 of Praat's "local jitter" measurement (which is scaled from 0 to 2).
 
 References
 ==========

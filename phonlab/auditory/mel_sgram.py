@@ -1,6 +1,14 @@
-__all__=["compute_mel_sgram"]
+__all__=["compute_mel_sgram", "mel_to_Hz", "Hz_to_mel"]
 
 import tensorflow as tf
+import numpy as np
+
+def Hz_to_mel(f):
+    return 1127  * np.log(1.0 + f/700)
+
+def mel_to_Hz(m):
+    return 700 * (np.exp(m / 1127) - 1.0)
+
 
 def compute_mel_sgram(x,fs, s=0.01):
     """Compute a Mel frequenc spectrogram of the signal in **x**.  This function is 
@@ -47,27 +55,30 @@ that to the tensor flow function to compute mel-frequency cepstral coefficients 
     frame_length = int(frame_length_sec*fs)
     step = int(step_sec*fs)
     fft_length = int(2**fft_pow)
-    while fft_length < framelength:
+    while fft_length < frame_length:
         fft_pow = fft_pow+1
         fft_length = 2**fft_pow
 
     # A 1024-point STFT with frames of 64 ms and 75% overlap.
-    stfts = tf.signal.stft(pcm, frame_length=frame_lenth, 
+    stfts = tf.signal.stft(x, frame_length=frame_length, 
                            frame_step=step,
                            fft_length=fft_length)
     sgram = tf.abs(stfts)
 
     # Warp the linear scale spectrograms into the mel-scale.
-    num_freq_bins = stfts.shape[-1].value
+    num_freq_bins = stfts.shape[-1]
     lower_edge_hertz, upper_edge_hertz, num_mel_bins = 80.0, 7600.0, 80
     warping_matrix = tf.signal.linear_to_mel_weight_matrix(num_mel_bins, 
                     num_freq_bins, fs, lower_edge_hertz, upper_edge_hertz)
     mel_sgram = tf.tensordot(sgram, warping_matrix, 1)
-    mel_sgram.set_shape(sgram.shape[:-1].concatenate(linear_to_mel_weight_matrix.shape[-1:]))
+    mel_sgram.set_shape(sgram.shape[:-1].concatenate(warping_matrix.shape[-1:]))
 
     # Compute a stabilized log to get log-magnitude mel-scale spectrograms.
     log_mel_sgram = tf.math.log(mel_sgram + 1e-6)
 
-    return log_mel_sgram
+    mel_range = Hz_to_mel(np.array([lower_edge_hertz, upper_edge_hertz]))
+    print(mel_range)
+    
+    return log_mel_sgram.numpy()
 
 

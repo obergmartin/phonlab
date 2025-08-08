@@ -7,6 +7,7 @@ from scipy import fft
 from pandas import DataFrame
 from scipy.signal import filtfilt
 from sklearn.linear_model import LinearRegression
+from scipy.ndimage import gaussian_filter
 
 def compute_cepstrogram(x,fs, dBscale=True, l= 0.04, s=0.005):
     '''Compute a `cepstrogram` of an audio signal.  Cepstral analysis was introduced by Bogert et al. (1963).  
@@ -64,7 +65,7 @@ References
 
     return(quef, ts, Ceps)
 
-def CPP(x,fs, target_fs = 16000, smooth=True, norm=True, dBscale=True, l= 0.04, s=0.005, return_Sxx = False):
+def CPP(x,fs, target_fs = 16000, smooth=2, norm=True, dBscale=True, f0_range = [60,400], l= 0.04, s=0.005, return_Sxx = False):
     '''Measure Cepstral Peak Prominence - an acoustic measure that has been shown to be highly correlated with 
 perceived breathy vocal quality (Hillenbrand & Houde, 1996).  This implementation drew inspiration and ideas from 
 John Kane's cpp() matlab function in the `covarep` repository.
@@ -77,13 +78,15 @@ Parameters
         Sampling rate of **x**
     target_fs : int, default = 16000
         Sampling rate for the analysis algorithm.
-    smooth : boolean, default = True
-        Flag to request smoothing of the cepstrogram, along the time and frequency axes
+    smooth : float, default = 2
+        The sigma value of a Gaussian filter that smooths the cepstrogram in both frequency and time
     norm : boolean, default = True
         Flag to request that the cepstral peak prominence be normalized for overall amplitude, using a linear fit 
         to the cepstrum and measuring the height of the peak above the fit line.
     dBscale : boolean, default = True
         Scale the cepstrum in dB
+    f0_range : an array of two numbers, default=[50,500]
+        The expected range for f0.
     l : float, default = 0.04
         Length of analysis windows.  The default is 40 milliseconds.
     s : float, default = 0.005
@@ -154,25 +157,25 @@ This example plots the cepstral peak prominence through the "I'm twelve" example
     quef,sec,Sxx = compute_cepstrogram(y, fs, dBscale=dBscale, l=l, s=s)
     
     if smooth:
-        timesmooth = 3  # adjacent frames, at 2 ms/frame
-        freqsmooth = int(len(quef)/100)
-        Sxx = filtfilt(np.ones(timesmooth)/timesmooth,1,Sxx,axis=1) # smooth on time axis
-        Sxx = filtfilt(np.ones(freqsmooth)/freqsmooth,1,Sxx,axis=-1) # smooth on frequency axis
+        Sxx = gaussian_filter(Sxx,sigma = smooth, radius=10)
 
-    F0lim = [500,50] # was [300,60] in Hillenbrand & Houde
-    low = int(np.round(fs/F0lim[0]))
-    high = int(np.round(fs/F0lim[1]))
 
+    low = int(np.round(fs/f0_range[1]))  # the shortest expected pitch period
+    high = int(np.round(fs/f0_range[0])) # the longest expected pitch period
+    
     cp = np.argmax(Sxx[:,low:high],axis=-1) + low
     cpp = np.max(Sxx[:,low:high],axis=-1)
     f0 = 1/(cp/fs)
 
     if norm:
+        # hard coding here the range for the linear regression CPP normalization
+        low = int(np.round(fs/500)) # was [300,60] in Hillenbrand & Houde
+        high = int(np.round(fs/50)) # was [300,60] in Hillenbrand & Houde
         X = np.array(np.arange(low,high,1))  # line fitting in the f0 region only
         X = np.reshape(X,(len(X),1))
         for n in range(Sxx.shape[0]):  # fit a line to each frame
             reg = LinearRegression().fit(X , y=Sxx[n,low:high])
-            p = reg.predict(np.reshape(cp[n],(1,1)))[0]
+            p = reg.predict(np.reshape(cp[n],(1,1)))[0] # predicted amplitude at the peak location
             cpp[n] = cpp[n]-p
             
     if return_Sxx:

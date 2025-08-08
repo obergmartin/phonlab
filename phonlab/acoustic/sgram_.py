@@ -50,7 +50,7 @@ def compute_sgram(x,fs,w):
     
 
 def sgram(x,fs,chan=0,start=0,end=-1, tf=8000, band='wb',
-          preemph = 0.94, font_size = 14, save_name='',slice_time=-1,cmap='Greys'):
+          preemph = 0.94, font_size = 14, min_prop = 0.2, save_name='',slice_time=-1,cmap='Greys'):
     """Make pretty good looking spectrograms
 
     * This function calls scipy.signal.spectrogram to calculate a magnitude spectrogram, which is then transformed to decibels, and passed to plt.imshow for plotting.  
@@ -81,6 +81,9 @@ def sgram(x,fs,chan=0,start=0,end=-1, tf=8000, band='wb',
         add high frequency preemphasis before making the spectrogram, a value between 0 and 1
     font_size : integer, default = 14
         the font size to use for the axis labels and tick labels.
+    min_prop : float, default = 0.2
+        set the 'floor' of the gray scale.  The default value specifies that the floor will be 
+        at 20% of the range between min and max amplitudes. 
     save_name : Path, default = ''
         name of a file to save the figure pyplot.savefig(), by default no file is saved.
     slice_time : float, default = -1
@@ -187,8 +190,9 @@ def sgram(x,fs,chan=0,start=0,end=-1, tf=8000, band='wb',
         fig = plt.figure(figsize=(figwidth, figheight),dpi=72)
         ax1 = fig.add_subplot(111)
 
+    vmin = np.min(Sxx) + (np.max(Sxx)-np.min(Sxx))*min_prop
     extent = (min(ts),max(ts),min(f),max(f))  # get the time and frequency values for indices.
-    im = ax1.imshow(Sxx, aspect='auto', interpolation='nearest', cmap=cmap, vmin = 25, 
+    im = ax1.imshow(Sxx, aspect='auto', interpolation='nearest', cmap=cmap, vmin = vmin, 
                 extent = extent, origin='lower')
     ax1.grid(which='major', axis='y', linestyle=':')  # add grid lines
     ax1.set_xlabel("Time (sec)", size=font_size)
