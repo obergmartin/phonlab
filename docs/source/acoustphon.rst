@@ -19,6 +19,7 @@ Formant Tracking
 .. autofunction:: phonlab.formant_to_df
 .. autofunction:: phonlab.get_deltaF
 .. autofunction:: phonlab.deltaF_norm
+.. autofunction:: phonlab.resize_vt
 
 Pitch Tracking
 --------------

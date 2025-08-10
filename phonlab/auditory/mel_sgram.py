@@ -31,21 +31,33 @@ Parameters
 
 Returns
 =======
+    mel_f : ndarray
+        a one dimensional array of mel frequency values - the frequency axis of the spectrogram
+    sec : ndarray
+        a one dimensional array of time values, the time axis of the spectrogram
     mel_sgram: ndarray
         A two-dimensional (time,frequency) array of amplitufe values.  The intervals between 
-        time slices is 10 ms, and the frequencies are evenly spaced on the mel scale from 80 
-        to 7600 Hz in 80 steps.
+        time slices is dependent on the **s** input parameter, by default 10 ms, and the 
+        frequencies are evenly spaced on the mel scale from 80 to 7600 Hz in 80 steps.
 
 Example
 =======
-This example uses this function to compute a log mel-frequency spectrogram, and then passes
+This example uses the function to compute a log mel-frequency spectrogram, and then passes
 that to the tensor flow function to compute mel-frequency cepstral coefficients from it.
 
-    .. code-block:: Python
+.. code-block:: Python
 
-        # Compute MFCCs from log_mel_spectrograms and take the first 13.
-        mel_sgram = phon.compute_mel_sgram(x,fs)
-        mfccs = tf.signal.mfccs_from_log_mel_spectrograms(mel_sgram)[..., :13]
+    # Compute MFCCs from log_mel_spectrograms and take the first 13.
+    mel_f, sec, mel_sgram = phon.compute_mel_sgram(x,fs)
+    mfccs = tf.signal.mfccs_from_log_mel_spectrograms(mel_sgram)[..., :13]
+
+.. figure:: images/mel_sgram.png
+    :scale: 40 %
+    :alt: a mel-frequency spectrogram
+    :align: center
+
+    The mel_sgram of the example audio file sf3_cln.wav - "cottage cheese with 
+    chives is delicious"
 
     """
     frame_length_sec = 0.064
@@ -74,11 +86,13 @@ that to the tensor flow function to compute mel-frequency cepstral coefficients 
     mel_sgram.set_shape(sgram.shape[:-1].concatenate(warping_matrix.shape[-1:]))
 
     # Compute a stabilized log to get log-magnitude mel-scale spectrograms.
-    log_mel_sgram = tf.math.log(mel_sgram + 1e-6)
+    log_mel_sgram = tf.math.log(mel_sgram + 1e-6).numpy()
 
-    mel_range = Hz_to_mel(np.array([lower_edge_hertz, upper_edge_hertz]))
-    print(mel_range)
+    start,stop = Hz_to_mel(np.array([lower_edge_hertz, upper_edge_hertz]))
+    mel_f = np.linspace(start,stop,num_mel_bins)
+
+    sec = (np.array(range(log_mel_sgram.shape[0])) * step_sec + frame_length_sec/2)
     
-    return log_mel_sgram.numpy()
+    return mel_f, sec, log_mel_sgram
 
 

@@ -1,4 +1,4 @@
-__all__=['get_deltaF', 'deltaF_norm']
+__all__=['get_deltaF', 'deltaF_norm', 'resize_vt']
 
 import pandas as df
 import numpy as np
@@ -98,3 +98,35 @@ Example
         df.drop(columns=['level_1'], inplace=True)  # clean up the dataframe
 
     return
+
+def resize_vt(df,deltaf):  
+    '''Compute new vowel formant values, from normalized values, as produced by the `phonlab.deltaF_norm()`
+function, using a new target deltaF value to produce a new non-normalized set of vowel formants.  
+This simulates changing the length of the speaker's vocal tract.
+
+Parameters
+----------
+df: DataFrame
+    The input dataframe must contain columns labeled 'F1/∆F', 'F2/∆F', 'F3/∆F', and 'F4/∆F'.  See `phon.track_formants()` and 
+    `phon.deltaF_norm()`.  These should be data from a single speaker.
+deltaf: float
+    The new deltaF value that will be used to calcuate the non-normalized values from the Fx/∆F normalized values.
+
+Returns
+-------
+
+df: DataFrame
+    New columns called 'new_F1', 'new_F2', etc. are added to the input DataFrame.
+
+    '''
+    
+    if 'F1/∆F' in df.columns:
+        df['new_F1'] = df['F1/∆F'] * deltaf
+    if 'F2/∆F' in df.columns:
+        df['new_F2'] = df['F2/∆F'] * deltaf
+    if 'F3/∆F' in df.columns:
+        df['new_F3'] = df['F3/∆F'] * deltaf
+    if 'F4/∆F' in df.columns:
+        df['new_F4'] = df['F4/∆F'] * deltaf
+        
+    return df

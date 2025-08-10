@@ -65,7 +65,7 @@ References
 
     return(quef, ts, Ceps)
 
-def CPP(x,fs, target_fs = 16000, smooth=2, norm=True, dBscale=True, f0_range = [60,400], l= 0.04, s=0.005, return_Sxx = False):
+def CPP(x,fs, target_fs = 16000, smooth=2, norm=True, dBscale=True, f0_range = [60,400], l= 0.04, s=0.005):
     '''Measure Cepstral Peak Prominence - an acoustic measure that has been shown to be highly correlated with 
 perceived breathy vocal quality (Hillenbrand & Houde, 1996).  This implementation drew inspiration and ideas from 
 John Kane's cpp() matlab function in the `covarep` repository.
@@ -173,12 +173,8 @@ This example plots the cepstral peak prominence through the "I'm twelve" example
         high = int(np.round(fs/50)) # was [300,60] in Hillenbrand & Houde
         X = np.array(np.arange(low,high,1))  # line fitting in the f0 region only
         X = np.reshape(X,(len(X),1))
-        for n in range(Sxx.shape[0]):  # fit a line to each frame
-            reg = LinearRegression().fit(X , y=Sxx[n,low:high])
-            p = reg.predict(np.reshape(cp[n],(1,1)))[0] # predicted amplitude at the peak location
-            cpp[n] = cpp[n]-p
+        reg =LinearRegression().fit(X,y=Sxx[:,low:high].T)  # vectorized regressions
+        p = np.diag(reg.predict(np.reshape(cp,(-1,1))))
+        cpp = cpp-p
             
-    if return_Sxx:
-        return quef,sec,Sxx
-    else:
-        return DataFrame({'sec': sec, 'f0':f0, 'cpp':cpp})
+    return DataFrame({'sec': sec, 'f0':f0, 'cpp':cpp})
