@@ -12,7 +12,7 @@ from ..utils.prep_audio_ import prep_audio
 from ..acoustic.lpc_residual import lpcresidual
 
 
-def get_rms(y, fs, scale=False):
+def get_rms(y, fs, s=0.005, l=0.04, scale=False):
     """Measure the time-varying root mean square (RMS) amplitude of the signal in **y**.
 
     Parameters
@@ -32,12 +32,10 @@ def get_rms(y, fs, scale=False):
     """
 
     # constants and global variables
-    frame_length_sec = 0.04
-    step_sec = 0.005
-
-    frame_length = int(fs * frame_length_sec) 
+    frame_length = int(fs * l) 
     half_frame = frame_length//2
-    step = int(fs * step_sec)  # number of samples between frames
+    frame_length = half_frame * 2 + 1    # odd number in frame  
+    step = int(fs * s)  # number of samples between frames
 
     rms = feature.rms(y=y,frame_length=frame_length, hop_length=step,center=False)[0]
     if scale:
@@ -51,7 +49,7 @@ def get_rms(y, fs, scale=False):
     return DataFrame({'sec': sec, 'rms':rms})
 
 
-def get_f0_B93(y, fs, f0_range = [60,400], s= 0.005):
+def get_f0_B93(y, fs, f0_range = [63,400], s= 0.005):
     """Track the fundamental frequency of voicing (f0), using a time domain method.
 
     This function implements the autocorrelation method described in Boersma (1993). where 
@@ -76,6 +74,8 @@ def get_f0_B93(y, fs, f0_range = [60,400], s= 0.005):
             Sampling rate of **x**
         f0_range : list of two integers, default = [63,400]
             The lowest and highest values to consider in pitch tracking.
+        s : float, default = 0.005
+            "Hop" interval between successive analysis windows. The default is 5 milliseconds
 
     Returns
     =======
@@ -113,6 +113,7 @@ def get_f0_B93(y, fs, f0_range = [60,400], s= 0.005):
     l_lag = int((1/f0_range[0])*fs) # longest lag
     frame_length = int(l_lag * 3)  # room for 3 periods (6 for HNR)
     half_frame = frame_length//2
+    frame_length = half_frame * 2 + 1    # odd number in frame  
     N = 1024
     while (frame_length+frame_length//2 > N): N = N * 2  # increase fft size if needed
 
@@ -149,7 +150,7 @@ def get_f0_B93(y, fs, f0_range = [60,400], s= 0.005):
     return DataFrame({'sec': sec, 'f0':f0, 'rms':rms, 'c':c, 'HNR': HNR, 'voiced': Voiced})
 
 
-def get_f0_sift(y, fs, f0_range = [63,400]):
+def get_f0_sift(y, fs, f0_range = [63,400], l=0.04, s=0.005):
     """Track the fundamental frequency of voicing (f0), using a time-domain method.
 
     The method in this function is an implementation of John Markel's (1972) simplified inverse filter tracking algorithm (SIFT) which is also used in track_formants().  LPC coefficients are calculated for each frame and the audio signal is inverse filtered with these, resulting in a quasi glottal waveform. Then autocorrelation is used to estimate the fundamental frequency.  Probability of voicing is given from a logistic regression formula using `rms` and `c` trained to predict the voicing state as determined by EGG data using the function `phonlab.egg_to_oq()` over the 10 speakers in the ASC corpus of Mandarin speech. The prediction of the EGG voicing decision was about 85% correct.
@@ -162,6 +163,11 @@ def get_f0_sift(y, fs, f0_range = [63,400]):
             Sampling rate of **x**
         f0_range : list of two integers, default = [63,400]
             The lowest and highest values to consider in pitch tracking.
+        l : float, default = 0.06
+            Length of the pitch analysis window in seconds. The default is 60 milliseconds.  
+        s : float, default = 0.005
+            "Hop" interval between successive analysis windows. The default is 5 milliseconds
+
 
     Returns
     =======
@@ -197,20 +203,17 @@ def get_f0_sift(y, fs, f0_range = [63,400]):
         ax2.plot(f0df.sec,f0df.f0, 'go')  
 
    """
-    # constants and global variables
-    frame_length_sec = 0.04  # 40 ms frame
-    step_sec = 0.005
-    
     x, fs = prep_audio(y, fs, target_fs=16000, pre = 0.94, quiet=True)  # no preemphasis, for RMS calc
 
-    frame_length = int(fs * frame_length_sec) 
+    # constants and global variables
+    frame_length = int(fs * l) 
     half_frame = frame_length//2
-    step = int(fs * step_sec)  # number of samples between frames
+    frame_length = half_frame * 2 + 1    # odd number in frame  
+    step = int(fs * s)  # number of samples between frames
     s_lag = int((1/f0_range[1])*fs) # shortest lag
     l_lag = int((1/f0_range[0])*fs) # longest lag
     N = 1024
     while (frame_length+frame_length//2 > N): N = N * 2  # increase fft size if needed
-
 
     # ----- compute the RMS amplitude --------
     rms = feature.rms(y=x,frame_length=frame_length, hop_length=step,center=False)
@@ -271,9 +274,7 @@ def SRH(Sxx,fs,f0_range):
 
     for n in range(nb): 
         S = Sxx[n]
-        srh = np.zeros((f0_range[1]-f0_range[0]))
-        for f in range(f0_range[1]-f0_range[0]-1): 
-            srh[f] = np.sum(S[[plus[f,:]]]) - np.sum([S[minus[f,:]]])
+        srh = np.sum(S[plus],axis=-1) - np.sum(S[minus],axis=-1)
         max_srh = np.max(srh)
         idx_srh = np.argmax(srh)
         f0[n] = f0_range[0]+idx_srh
@@ -336,6 +337,8 @@ T. Drugman, A. Alwan (2011) Joint robust voicing detection and pitch estimation 
     
     frame_length = int(fs * l) 
     half_frame = frame_length//2
+    frame_length = half_frame * 2 + 1    # odd number in frame  
+
     step = int(fs * s)  # number of samples between frames
 
     # ----- get rms amplitude from audio wav -------------
@@ -357,7 +360,6 @@ T. Drugman, A. Alwan (2011) Joint robust voicing detection and pitch estimation 
 
     oldF0med,iters = 0, 0
     while F0med != oldF0med and iters<1 and np.max(SRHval) > 0.1:
-        print(f"F0med={F0med}")
         oldF0med = F0med
         iters += 1
         f0_range[1] = int(F0med) + 100  # only adjusting the top end of the range
@@ -374,7 +376,7 @@ T. Drugman, A. Alwan (2011) Joint robust voicing detection and pitch estimation 
     return DataFrame({'sec': sec, 'f0':f0, 'rms':rms, 'srh':SRHval, 'voiced': voiced}),f0_range
 
 
-def get_f0_ac(y, fs, f0_range = [60,400], s=0.005):
+def get_f0_ac(y, fs, f0_range = [60,400], l=0.05, s=0.005):
     """Track the fundamental frequency of voicing (f0), using a time domain method.
 
     This function implements a simple autocorrelation method of pitch tracking with no filtering prior to calculating the autocorrelation. Probability of voicing is given from a logistic regression formula using `rms` and `c` trained to predict the voicing state as determined by EGG data using the function `phonlab.egg_to_oq()` over the 10 speakers in the ASC corpus of Mandarin speech. The prediction of the EGG voicing decision was about 88% correct.
@@ -387,11 +389,11 @@ def get_f0_ac(y, fs, f0_range = [60,400], s=0.005):
             Sampling rate of **x**
         f0_range : list of two integers, default = [63,400]
             The lowest and highest values to consider in pitch tracking.
+        l : float, default = 0.05
+            Length of the pitch analysis window in seconds. The default is 50 milliseconds.  
         s : float, default = 0.005
-            "Hop" interval between successive analysis windows. The default is 5 milliseconds
-  
+            "Hop" interval between successive analysis windows. The default is 5 milliseconds  
             
-
     Returns
     =======
         df: pandas DataFrame  
@@ -412,8 +414,10 @@ def get_f0_ac(y, fs, f0_range = [60,400], s=0.005):
     short = fs//f0_range[1]  # period of highest allowable frequency - shortest lag
     long = fs//f0_range[0]  # period of lowest allowable frequency - longest lag
     
-    frame_length = int(long * 3)  # room for periods
+    frame_length = int(fs * l)  # room for periods
     half_frame = frame_length//2
+    frame_length = half_frame * 2 + 1    # odd number in frame  
+
     step = int(fs * s)  # number of samples between frames
 
     rms = feature.rms(y=x,frame_length=frame_length, hop_length=step,center=False)
@@ -483,7 +487,7 @@ def f0_from_harmonics(f_p,i,h,nh):
     mean_f0 = np.average(f0,weights=np.arange(len(f0))+1)
     return C,mean_f0 
     
-def get_f0_acd(y, fs,  f0_range=[60,400], s=0.005, prom=14, min_height = 0.6, test_time=-1):
+def get_f0_acd(y, fs,  f0_range=[60,400], l=0.05, s=0.005, prom=14, min_height = 0.6, test_time=-1):
     """Track the fundamental frequency of voicing, using a frequency domain method.
 
 This function implements the 'approximate common denominator" algorithm proposed by Aliik, Mihkla and Ross (1984), which was an improvement on the method proposed by Duifuis, Willems and Sluyter (1982).  The algorithm finds candidate harmonic peaks in the spectrum, and chooses a value of f0 that best predicts the harmonic pattern.  One feature of this method is that it reports a voice quality measure (the difference in the amplitudes of harmonic 1 and harmonic 2).
@@ -499,6 +503,8 @@ Parameters
         the sampling rate of the audio in **y**.
     f0_range : a list of two integers, default=[60,400]
         The lowest and highest values to consider in pitch tracking. The algorithm is not particularly sensitive to this parameter, but it can be useful in avoiding pitch-halving or pitch-doubling.
+    l : float, default = 0.05
+        Length of the pitch analysis window in seconds. The default is 50 milliseconds.  
     s : float, default = 0.005
         "Hop" interval between successive analysis windows. The default is 5 milliseconds
     prom : numeric, default = 14 dB
@@ -571,7 +577,9 @@ Example
     
     N = 1024    # FFT size
 
-    frame_len = int(fs*0.04)  # 40 ms frame
+    frame_len = int(fs*l)  # 40 ms frame
+    half_frame = frame_len//2
+    frame_length = half_frame * 2 + 1    # odd number in frame  
     step = int(fs*s)  # stride between frames
     noverlap = frame_len - step   # points of overlap between successive frames
 
@@ -584,7 +592,7 @@ Example
 
     nb = len(ts)  # the number of frames in the spectrogram
     f0 = np.full(nb,np.nan)  # array filled with nan
-    h1h2 = np.full(nb,np.nan)        # array filled with nan
+    h2h1 = np.full(nb,np.nan)        # array filled with nan
     c = np.full(nb,5.0)      # default value of c is 5.0
         
     min_dist = int(f0_range[0]/(fs/N)) # min distance btw harmonics
@@ -616,7 +624,7 @@ Example
                         c[idx] = C      
                         i_f0 = np.argmin(np.fabs(_f0 - f)) # f index that is closest to f0
                         i_2f0 = np.argmin(np.fabs((2 * _f0) - f)) # closest to 2f0 for (h1h2)
-                        h1h2[idx] = spec[i_f0] - spec[i_2f0]
+                        h2h1[idx] = spec[i_2f0] - spec[i_f0]
                         f0[idx] = _f0
 
         if idx==i_test:  # show diagnostic info, only at a target frame
@@ -639,5 +647,5 @@ Example
     probv = odds / (1 + odds)
     voiced = probv > 0.5
 
-    return DataFrame({'sec': ts, 'f0':f0, 'rms':rms, 'h1h2':h1h2, 'c':c, 'probv': probv, 'voiced':voiced})
+    return DataFrame({'sec': ts, 'f0':f0, 'rms':rms, 'h2h1':h2h1, 'c':c, 'probv': probv, 'voiced':voiced})
 

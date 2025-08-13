@@ -33,6 +33,7 @@ Pitch Tracking
 Voice Quality
 -------------
 .. autofunction:: phonlab.lpcresidual
+.. autofunction:: phonlab.h2h1
 .. autofunction:: phonlab.gci_sedreams
 .. autofunction:: phonlab.compute_cepstrogram
 .. autofunction:: phonlab.CPP

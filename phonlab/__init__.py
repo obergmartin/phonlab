@@ -14,6 +14,7 @@ from .acoustic.vowel_norm import *
 from .acoustic.lpc_residual import *
 from .acoustic.gci import *
 from .acoustic.cepstral import *
+from .acoustic.h2h1_ import *
 
 __all__ = acoustic.sgram_.__all__.copy()
 __all__ += acoustic.burst_detect.__all__
@@ -27,6 +28,7 @@ __all__ += acoustic.vowel_norm.__all__
 __all__ += acoustic.lpc_residual.__all__
 __all__ += acoustic.gci.__all__
 __all__ += acoustic.cepstral.__all__
+__all__ += acoustic.h2h1_.__all__
 
 # -------- functions in the "auditory" portion of the package ---------
 from .auditory.sigcor import *

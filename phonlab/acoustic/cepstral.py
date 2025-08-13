@@ -91,7 +91,7 @@ Parameters
         Length of analysis windows.  The default is 40 milliseconds.
     s : float, default = 0.005
         Step size, of hops between analysis windows. The default is 5 milliseconds.  If smoothing==True, the step size
-        is reduced to 0.001 (1 millisecond).
+        is reduced to 0.002 (2 millisecond).
     return_Sxx : boolean, default = False
         flag to request to return the cepstrogram (produced by `compute_cepstrogram()`) instead of returning an analysis 
         dataframe.  If smoothing is requested the smoothed cepstrogram is returned.  The return values (instead of the 
@@ -150,30 +150,29 @@ This example plots the cepstral peak prominence through the "I'm twelve" example
     :align: center  
 
     '''
-    y,fs = prep_audio(x, fs, target_fs=target_fs, pre=0, quiet=True)  # resample to 16kHz
+    y,fs = prep_audio(x, fs, target_fs=target_fs, pre=0.96, quiet=True)  # resample to 16kHz
 
-    if smooth: s = 0.002  # faster framerate if smoothed
+    #if smooth: s = 0.002  # faster framerate if smoothed
 
     quef,sec,Sxx = compute_cepstrogram(y, fs, dBscale=dBscale, l=l, s=s)
     
     if smooth:
         Sxx = gaussian_filter(Sxx,sigma = smooth, radius=10)
 
-
-    low = int(np.round(fs/f0_range[1]))  # the shortest expected pitch period
-    high = int(np.round(fs/f0_range[0])) # the longest expected pitch period
+    sT = int(np.round(fs/f0_range[1]))  # the shortest expected pitch period
+    lT = int(np.round(fs/f0_range[0])) # the longest expected pitch period
     
-    cp = np.argmax(Sxx[:,low:high],axis=-1) + low
-    cpp = np.max(Sxx[:,low:high],axis=-1)
+    cp = np.argmax(Sxx[:,sT:lT],axis=-1) + sT
+    cpp = np.max(Sxx[:,sT:lT],axis=-1)
     f0 = 1/(cp/fs)
 
     if norm:
         # hard coding here the range for the linear regression CPP normalization
         low = int(np.round(fs/500)) # was [300,60] in Hillenbrand & Houde
         high = int(np.round(fs/50)) # was [300,60] in Hillenbrand & Houde
-        X = np.array(np.arange(low,high,1))  # line fitting in the f0 region only
+        X = np.array(np.arange(sT,lT,1))  # line fitting in the f0 region only
         X = np.reshape(X,(len(X),1))
-        reg =LinearRegression().fit(X,y=Sxx[:,low:high].T)  # vectorized regressions
+        reg =LinearRegression().fit(X,y=Sxx[:,sT:lT].T)  # vectorized regressions
         p = np.diag(reg.predict(np.reshape(cp,(-1,1))))
         cpp = cpp-p
             
