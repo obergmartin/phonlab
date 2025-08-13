@@ -1,5 +1,6 @@
 __all__=['h2h1'] 
 
+import numpy as np
 from scipy.signal import iirpeak,filtfilt,windows, convolve, find_peaks
 from scipy import fft
 from librosa.util import frame
@@ -7,7 +8,7 @@ from librosa.util import frame
 def h2h1(resid,fs,f0df,f0med=None,use_ac=True):
     '''Estimate the amplitude ratio of harmonic 2 and harmonic 1, in decibels.  This function 
 uses the method described by Drugman, Kane & Gobl (2012), and was inspired by the matlab
-function `get_cread_h2h1()` published in the Covarep Matlab repository of speech analysis software.  
+function `get_creak_h2h1()` published in the Covarep Matlab repository of speech analysis software.  
 The h2h1 measurements given by this function are correlated with those produced by `phonlab.get_f0_acd()`
 but the measurements from `h2h1()` should be used when testing for creaky voice.  
 
@@ -56,9 +57,9 @@ Example
 
         x,fs = phon.prep_audio(x, fs, target_fs=16000, pre = 0, quiet=True)  # resample, scale
         resid,fs = phon.lpcresidual(x,fs)
-        f0acd = phon.get_f0_ac(x,fs)
+        f0df = phon.get_f0_ac(x,fs)
 
-        df = h2h1(resid,fs,f0acd)  # <- using information from lpcresidual(), and get_f0_ac()
+        df = h2h1(resid,fs,f0df)  # <- using information from lpcresidual(), and get_f0_ac()
 
         # ---- Now plot the results -------
         ret = phon.sgram(x,fs,cmap="Grays") # draw a spectrogram of the sound
