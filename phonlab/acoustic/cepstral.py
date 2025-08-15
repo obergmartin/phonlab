@@ -5,7 +5,7 @@ import numpy as np
 from librosa import util
 from scipy import fft
 from pandas import DataFrame
-from scipy.signal import filtfilt
+from scipy.signal import windows,filtfilt
 from sklearn.linear_model import LinearRegression
 from scipy.ndimage import gaussian_filter
 
@@ -47,13 +47,14 @@ References
     step = int(s*fs)
     half_frame = round(frame_length/2)
     frame_length = half_frame * 2 + 1    # odd number in frame
-    NFFT = int(2** (np.ceil(np.log(frame_length)/np.log(2))))
+    NFFT = int(2**(np.ceil(np.log(frame_length)/np.log(2))))
     quef = (np.array(range(int(NFFT/2)))/fs *1000)  # the quefrecy axis of the cepstra (in ms)
     frames = util.frame(x,frame_length=frame_length, hop_length=step,axis=0)
 
     nb = frames.shape[0]
     f = frames.shape[1]
-    w = np.hanning(frame_length)
+    w = windows.hann(frame_length)
+    
     Sxx = 10 * np.log10(np.abs(fft.rfft(w*frames,NFFT))**2)
     Sxx2 = np.abs(fft.rfft(Sxx,NFFT))**2   # spectrum of the spectrum -- cepstrum
     if (dBscale):
@@ -150,14 +151,14 @@ This example plots the cepstral peak prominence through the "I'm twelve" example
     :align: center  
 
     '''
-    y,fs = prep_audio(x, fs, target_fs=target_fs, pre=0.96, quiet=True)  # resample to 16kHz
+    y,fs = prep_audio(x, fs, target_fs=target_fs, pre=0.0, quiet=True)  # resample to 16kHz
 
-    #if smooth: s = 0.002  # faster framerate if smoothed
+    if smooth: s = 0.002  # faster framerate if smoothed
 
-    quef,sec,Sxx = compute_cepstrogram(y, fs, dBscale=dBscale, l=l, s=s)
+    quef,sec,Sxx = compute_cepstrogram(y, fs, dBscale, l, s)
     
     if smooth:
-        Sxx = gaussian_filter(Sxx,sigma = smooth, radius=10)
+        Sxx = gaussian_filter(Sxx,sigma = smooth,truncate=3)
 
     sT = int(np.round(fs/f0_range[1]))  # the shortest expected pitch period
     lT = int(np.round(fs/f0_range[0])) # the longest expected pitch period

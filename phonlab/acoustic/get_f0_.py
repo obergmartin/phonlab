@@ -1,4 +1,4 @@
-__all__=['get_rms','get_f0_B93', 'get_f0_sift','get_f0_srh','get_f0_ac','get_f0_acd']
+__all__=['get_rms','get_f0','get_f0_srh','get_f0_acd']
 
 import numpy as np
 from scipy.signal import windows, find_peaks, spectrogram, peak_prominences, fftconvolve
@@ -49,8 +49,8 @@ def get_rms(y, fs, s=0.005, l=0.04, scale=False):
     return DataFrame({'sec': sec, 'rms':rms})
 
 
-def get_f0_B93(y, fs, f0_range = [63,400], s= 0.005):
-    """Track the fundamental frequency of voicing (f0), using a time domain method.
+def get_f0(y, fs, f0_range = [63,400], s= 0.005):
+    """Track the fundamental frequency of voicing (f0), using autocorrelation
 
     This function implements the autocorrelation method described in Boersma (1993). where 
     the autocorrelation function is normalized by the autocorrelation of the 
@@ -61,9 +61,10 @@ def get_f0_B93(y, fs, f0_range = [63,400], s= 0.005):
     The Harmonics-to-Noise ratio (HNR) in each frame is estimated from the peak of the 
     autocorreation function (c) as `10 * log10(c/(1-c))`.
 
-    A Boolean voicing decision is based on the addition of the (centered) rms amplitude 
-    and the HNR estimuate, with this formula: `(rms - mean(rms)) + HNR`.  If 
-    the quantity is greater than 4dB the voiced value is `True`.
+    Probability of voicing is given from a logistic regression formula using `rms` and `c` 
+    to predict the voicing state as determined by EGG data using the function 
+    `phonlab.egg_to_oq()` over the 10 speakers in the ASC corpus of Mandarin speech. 
+    The prediction of the EGG voicing decision was about 86% correct.
 
 
     Parameters
@@ -90,7 +91,8 @@ def get_f0_B93(y, fs, f0_range = [63,400], s= 0.005):
         * rms - peak normalized rms amplitude in the band from 0 to fs/2
         * c - value of the peak autocorrelation found in the frame
         * HNR - an estimate of the harmonics to noise ratio
-        * voiced - a boolean, true if both rms and HNR are high
+        * probv - probability of being voiced
+        * voiced - a boolean, true if probv > 0.5
 
     References
     ==========
@@ -102,7 +104,7 @@ def get_f0_B93(y, fs, f0_range = [63,400], s= 0.005):
         :alt: a spectrogram with three pitch traces compared - get_f0_acd, get_f0_B93, praat
         :align: center
 
-        Comparing the f0 found by `phon.get_f0_B93()` plotted in blue, and the f0 values found by `parselmouth` `to_Pitch()`, plotted with chartreuse dots, and the f0 values found by get_f0_acd, plotted in orange.  The traces are offset from each other by 10Hz so they can be seen.
+        Comparing the f0 found by `phon.get_f0()` plotted in blue, and the f0 values found by `parselmouth` `to_Pitch()`, plotted with chartreuse dots, and the f0 values found by get_f0_acd, plotted in orange.  The traces are offset from each other by 10Hz so they can be seen.
 
     """
     x, fs = prep_audio(y, fs, target_fs = None, pre = 0.0, quiet=True)  
@@ -123,9 +125,9 @@ def get_f0_B93(y, fs, f0_range = [63,400], s= 0.005):
     f = frames.shape[1]  # number of frequency steps
     
     # ----- Hann window and its autocorrelation ----------
-    w = np.hanning(frame_length)
+    w = windows.hann(frame_length)
     s = fft.fft(w,N)
-    rw = fft.fft(np.square(np.abs(s)),N) + 10
+    rw = fft.fft(np.square(np.abs(s)),N) + 1
     rw = rw/np.max(rw)
 
     # ------- autocorrelations of all of the frames in the file -----------
@@ -145,110 +147,14 @@ def get_f0_B93(y, fs, f0_range = [63,400], s= 0.005):
     rms = 10 * np.log10(np.sqrt(np.divide(np.sum(np.square(np.abs(Sxx)),axis=1),f))) 
     c = np.array([np.abs(np.max(rx[i,s_lag:l_lag])) for i in range(nb)])
     HNR = 10 * np.log10(c/(1-c),where=np.where(c<1,True,False),out=np.zeros(c.shape))
-    Voiced = ((rms - np.mean(rms)) + HNR) > 4
 
-    return DataFrame({'sec': sec, 'f0':f0, 'rms':rms, 'c':c, 'HNR': HNR, 'voiced': Voiced})
+    # voicing decision
+    odds = np.exp(-2.25 + (0.26*rms) + (3.39*c))  # logistic formula, trained on ASC corpus
+    probv = odds / (1 + odds)
+    Voiced = probv > 0.5
+    #Voiced = ((rms - np.mean(rms)) + HNR) > 4
 
-
-def get_f0_sift(y, fs, f0_range = [63,400], l=0.04, s=0.005):
-    """Track the fundamental frequency of voicing (f0), using a time-domain method.
-
-    The method in this function is an implementation of John Markel's (1972) simplified inverse filter tracking algorithm (SIFT) which is also used in track_formants().  LPC coefficients are calculated for each frame and the audio signal is inverse filtered with these, resulting in a quasi glottal waveform. Then autocorrelation is used to estimate the fundamental frequency.  Probability of voicing is given from a logistic regression formula using `rms` and `c` trained to predict the voicing state as determined by EGG data using the function `phonlab.egg_to_oq()` over the 10 speakers in the ASC corpus of Mandarin speech. The prediction of the EGG voicing decision was about 85% correct.
-
-    Parameters
-    ==========
-        y : ndarray
-            A one-dimensional array of audio samples
-        fs : int
-            Sampling rate of **x**
-        f0_range : list of two integers, default = [63,400]
-            The lowest and highest values to consider in pitch tracking.
-        l : float, default = 0.06
-            Length of the pitch analysis window in seconds. The default is 60 milliseconds.  
-        s : float, default = 0.005
-            "Hop" interval between successive analysis windows. The default is 5 milliseconds
-
-
-    Returns
-    =======
-        df: pandas DataFrame  
-            measurements at 5 msec intervals.
-
-    Note
-    ====
-    The columns in the returned dataframe are for each frame of audio:
-        * sec - time at the midpoint of each frame
-        * f0 - estimate of the fundamental frequency
-        * rms - peak normalized rms amplitude in the band from 0 to 8000 Hz
-        * c - value of the peak autocorrelation found in the frame
-        * probv - estimated probability of voicing
-        * voiced - a boolean, true if probv>0.5
-
-    References
-    ==========
-    J. Markel (1972) The SIFT algorithm for fundamental frequency estimation. `IEEE Transactions on Audio and Electroacoustics`, 20(5), 367 - 377
-
-    Example
-    =======
-
-    .. code-block:: Python
-
-        example_file = importlib.resources.files('phonlab') / 'data' / 'example_audio' / 'sf3_cln.wav'
-
-        x,fs = phon.loadsig(example_file,chansel=[0])
-        f0df = get_f0(x, fs, f0_range= [63,400])
-        
-        ret = phon.sgram(x,fs,cmap='Blues') # draw the spectrogram from the array of samples
-        ax2 = ret[0].twinx()    # the first item returned, is the matplotlib axes of the spectrogram
-        ax2.plot(f0df.sec,f0df.f0, 'go')  
-
-   """
-    x, fs = prep_audio(y, fs, target_fs=16000, pre = 0.94, quiet=True)  # no preemphasis, for RMS calc
-
-    # constants and global variables
-    frame_length = int(fs * l) 
-    half_frame = frame_length//2
-    frame_length = half_frame * 2 + 1    # odd number in frame  
-    step = int(fs * s)  # number of samples between frames
-    s_lag = int((1/f0_range[1])*fs) # shortest lag
-    l_lag = int((1/f0_range[0])*fs) # longest lag
-    N = 1024
-    while (frame_length+frame_length//2 > N): N = N * 2  # increase fft size if needed
-
-    # ----- compute the RMS amplitude --------
-    rms = feature.rms(y=x,frame_length=frame_length, hop_length=step,center=False)
-    rms = 20*np.log10(rms[0]/np.max(rms[0]))
-
-    # ------- compute f0 from the LPC residual signal ----------
-    resid,fs = lpcresidual(x,fs,target_fs=fs)
-
-    frames = util.frame(resid, frame_length=frame_length, hop_length=step,axis=0)    
-    nb = frames.shape[0]  # the number of frames (or blocks) in the LPC analysis
-    f = frames.shape[1]  # number of frequency steps
-        
-    # ----- Hann window and its autocorrelation ----------
-    w = np.hanning(frame_length)
-    s = fft.fft(w,N)
-    rw = fft.fft(np.square(np.abs(s)),N) + 10
-    rw = rw/np.max(rw)
-
-    # ------- autocorrelations of all of the frames in the file -----------
-    Sxx = fft.fft(w*frames,N)
-    ra = fft.fft(np.square(np.abs(Sxx)),N)
-    ra = np.divide(ra.T,np.max(ra,axis= -1)).T  # frame by frame normalization
-
-    rx = abs(ra/rw)  # normalize by window autocorrelation
-
-    # ------ find best lag in each frame -------
-    lag = np.array([s_lag + np.argmax(rx[i,s_lag:l_lag]) for i in range(nb)])
-    f0 = 1/(lag/fs)  # convert lags into f0
-
-    c = np.array(np.max(rx[i,s_lag:l_lag]) for i in range(nb))
-
-    # ---------- compute the time axis ----------------
-    sec = (np.array(range(nb)) * step + half_frame)/fs
-
-    return DataFrame({'sec': sec, 'f0':f0, 'rms':rms, 'c':c})
+    return DataFrame({'sec': sec, 'f0':f0, 'rms':rms, 'c':c, 'HNR': HNR, 'probv': probv, 'voiced': Voiced})
 
 
 def SRH(Sxx,fs,f0_range):  
@@ -282,12 +188,12 @@ def SRH(Sxx,fs,f0_range):
     return f0,SRHval
 
 
-def get_f0_srh(y, fs, f0_range = [60,400], l = 0.06, s=0.005, vthresh=0.07):
+def get_f0_srh(y, fs, f0_range = [60,400], isResidual = False, l = 0.06, s=0.005, vthresh=0.07):
     """Track the fundamental frequency of voicing (f0), using a frequency domain method.
 
 This function is an implementation of Drugman and Alwan's (2011) "Summation of 
 Residual Harmonics" (SRH) method of pitch tracking.  The signal is downsampled to 
-10 kHz, and inverse filtered with LPC analysis to remove the influence of vowel 
+16 kHz, and inverse filtered with LPC analysis to remove the influence of vowel 
 formants. Then harmonics are found in the spectrum of the residual signal.
 Drugman and Alwan found that this technique provides an estimate of F0 that is 
 robust when the audio signal is corrupted by noise. 
@@ -295,6 +201,11 @@ robust when the audio signal is corrupted by noise.
 The f0 range is adaptively adjusted and the result of this is returned by the function.
 If you have multiple recordings of the same person, it would speed things up to 
 make use of this return value.
+
+Probability of voicing is given from a logistic regression formula using `rms` and `srh` 
+trained to predict the voicing state as determined by EGG data using the function `phonlab.egg_to_oq()` 
+over the 10 speakers in the ASC corpus of Mandarin speech. The prediction of the EGG voicing 
+decision was about 83% correct.
 
 Parameters
 ==========
@@ -304,12 +215,12 @@ Parameters
         Sampling rate of **x**
     f0_range : list of two integers, default = [60,400]
         The lowest and highest values to consider in pitch tracking. This algorithm is quite sensitive to the values given in this setting.
+    isResidual : Boolean, default = False
+        If the input array is a residual signal
     l : float, default = 0.06
         Length of the pitch analysis window in seconds. The default is 60 milliseconds.  
     s : float, default = 0.005
         "Hop" interval between successive analysis windows. The default is 5 milliseconds
-    vthresh:  float, default = 0.07
-        A threshold on the SRH value for deciding if a frame is voiced.  Lower values make the routine more likely to call frames voiced.
 
 Returns
 =======
@@ -325,6 +236,7 @@ The columns in the returned dataframe are for each frame of audio:
     * f0 - estimate of the fundamental frequency
     * rms - peak normalized rms amplitude in the band from 0 to 5 kHz
     * srh - value of SRH (normalized sum of the residual harmonics)
+    * probv - estimated probability of voicing
     * voiced - a boolean decision based on the srh value (see Drugman and Alwan)
 
 References
@@ -334,22 +246,24 @@ T. Drugman, A. Alwan (2011) Joint robust voicing detection and pitch estimation 
 
     """
     x,fs = prep_audio(y, fs, target_fs=16000, pre = 0, quiet=True)  # resample, preemphasis
-    
-    frame_length = int(fs * l) 
+
+    frame_length = int(fs * l)  # frame size in samples
     half_frame = frame_length//2
     frame_length = half_frame * 2 + 1    # odd number in frame  
-
     step = int(fs * s)  # number of samples between frames
-
+    
     # ----- get rms amplitude from audio wav -------------
-    rms = feature.rms(y=x,frame_length=frame_length, hop_length=step,center=False)
+    rms = feature.rms(y=x,frame_length=frame_length,hop_length=step,center=False)
     rms = 20*np.log10(rms[0]/np.max(rms[0]))
 
     # ---- get the f0 from the sum of the residual harmonics (srh) -------------
-    resid,fs = lpcresidual(x,fs)  # get the lpc residual signal (remove vocal tract)
+    if isResidual:
+        resid = x
+    else:
+        resid,fs = lpcresidual(x,fs)  # get the lpc residual signal
 
     w = windows.hamming(frame_length)
-    frames = util.frame(resid, frame_length=frame_length, hop_length=step,axis=0)    
+    frames = util.frame(resid,frame_length=frame_length, hop_length=step,axis=0)    
     frames = np.multiply(frames,w)   # apply a Hamming window to each frame, for lpc
     
     Sxx = np.abs(np.fft.rfft(frames,2**14))           # spectrogram of the residual
@@ -358,7 +272,7 @@ T. Drugman, A. Alwan (2011) Joint robust voicing detection and pitch estimation 
     f0,SRHval =  SRH(Sxx,fs,f0_range)
     F0med = int(np.nanmedian(np.where(SRHval<0.1,f0,np.nan)))
 
-    oldF0med,iters = 0, 0
+    oldF0med,iters = 0, 0  # iterate once to adjust the pitch range
     while F0med != oldF0med and iters<1 and np.max(SRHval) > 0.1:
         oldF0med = F0med
         iters += 1
@@ -367,17 +281,22 @@ T. Drugman, A. Alwan (2011) Joint robust voicing detection and pitch estimation 
         F0med = int(np.nanmedian(np.where(SRHval<0.1,f0,np.nan)))
 
     # ---------- get voicing decisions --------------
-    if np.std(SRHval) > 0.05: vthresh = vthresh*1.2
-    voiced = np.where(SRHval > vthresh,True,False)
+    odds = np.exp(1.65 + (0.15*rms) + (15.26*SRHval))  # logistic formula, trained on ASC corpus
+    probv = odds / (1 + odds)
+    voiced = probv > 0.5
+
+    # vthresh = 0.06               # Drugman et al voicing decision
+    #if np.std(SRHval) > 0.05: vthresh = vthresh*1.2 
+    #voiced = np.where(SRHval > vthresh,True,False)
     
     # ---- get the time at the center of each frame ---------------
     sec = (np.array(range(frames.shape[0])) * step + half_frame).astype(int)/fs
    
-    return DataFrame({'sec': sec, 'f0':f0, 'rms':rms, 'srh':SRHval, 'voiced': voiced}),f0_range
+    return DataFrame({'sec': sec, 'f0':f0, 'rms':rms, 'srh':SRHval, 'probv': probv, 'voiced': voiced})
 
 
 def get_f0_ac(y, fs, f0_range = [60,400], l=0.05, s=0.005):
-    """Track the fundamental frequency of voicing (f0), using a time domain method.
+    """Track the fundamental frequency of voicing (f0), using autocorrelation.
 
     This function implements a simple autocorrelation method of pitch tracking with no filtering prior to calculating the autocorrelation. Probability of voicing is given from a logistic regression formula using `rms` and `c` trained to predict the voicing state as determined by EGG data using the function `phonlab.egg_to_oq()` over the 10 speakers in the ASC corpus of Mandarin speech. The prediction of the EGG voicing decision was about 88% correct.
 
@@ -409,7 +328,7 @@ def get_f0_ac(y, fs, f0_range = [60,400], l=0.05, s=0.005):
         * probv - estimated probability of voicing
         * voiced - a boolean, true if probv>0.5
     """
-    x, fs = prep_audio(y, fs, target_fs = None, pre = 0, quiet=True)  
+    x, fs = prep_audio(y, fs, target_fs = 32000, pre = 0, quiet=True)  
 
     short = fs//f0_range[1]  # period of highest allowable frequency - shortest lag
     long = fs//f0_range[0]  # period of lowest allowable frequency - longest lag
@@ -445,12 +364,14 @@ def get_f0_ac(y, fs, f0_range = [60,400], l=0.05, s=0.005):
             c[i] = 0
         else:
             c[i] = np.sqrt(ac[idx]) / np.sqrt(ac[0])
+    
+    HNR = 10 * np.log10(c/(1-c),where=np.where(c<1,True,False),out=np.zeros(c.shape))
 
     odds = np.exp(0.48 + (0.19*rms) + (5.44*c))  # logistic formula, trained on ASC corpus
     probv = odds / (1 + odds)
     voiced = probv > 0.5
 
-    return DataFrame({'sec': sec, 'f0':f0, 'rms':rms, 'c':c, 'probv': probv, 'voiced':voiced})
+    return DataFrame({'sec': sec, 'f0':f0, 'rms':rms, 'c':c, 'HNR':HNR, 'probv': probv, 'voiced':voiced})
 
 def f0_from_harmonics(f_p,i,h,nh):  
     ''' Assign harmonic numbers to the peaks in f_p -- this function is used in get_f0_acd
@@ -492,8 +413,8 @@ def get_f0_acd(y, fs,  f0_range=[60,400], l=0.05, s=0.005, prom=14, min_height =
 
 This function implements the 'approximate common denominator" algorithm proposed by Aliik, Mihkla and Ross (1984), which was an improvement on the method proposed by Duifuis, Willems and Sluyter (1982).  The algorithm finds candidate harmonic peaks in the spectrum, and chooses a value of f0 that best predicts the harmonic pattern.  One feature of this method is that it reports a voice quality measure (the difference in the amplitudes of harmonic 1 and harmonic 2).
 
-Probability of voicing is given from a logistic regression formula using `rms` and Duifuis et al.'s harmonicity criterion `c`  to predict the voicing state as determined by EGG data using the function `phonlab.egg_to_oq()` over the 10 speakers in the ASC corpus of Mandarin speech. The prediction of the EGG voicing decision was about 86% correct.
-Aliik et al. (1984) used a cutoff of c < 3.5 as a voicing threshold.
+Probability of voicing is given from a logistic regression formula using `rms`, the `h2h1` ratio, and Duifuis et al.'s harmonicity criterion `C`  to predict the voicing state as determined by EGG data using the function `phonlab.egg_to_oq()` over the 10 speakers in the ASC corpus of Mandarin speech. The prediction of the EGG voicing decision was about 86% correct.
+Aliik et al. (1984) used a cutoff of C < 3.5 as a voicing threshold.
 
 Parameters
 ==========
@@ -524,7 +445,7 @@ Note
         * f0 - estimate of the fundamental frequency
         * rms - rms amplitude in a low frequency band from 0 to 1200 Hz
         * h1h2 - the difference in the amplitudes of the first two harmonics (H1 - H2) in dB
-        * c - harmonicity criterion (lower values indicate stronger harmonic pattern)
+        * C - harmonicity criterion (lower values indicate stronger harmonic pattern)
         * probv - estimated probability of voicing
         * voiced - a boolean, true if probv>0.5
 
@@ -643,9 +564,10 @@ Example
             print(f"height = {height:0.2f},max={np.max(spec):0.2f}, min={np.min(spec):0.2f}, c={best_c}")
             print(f"time = {test_time}, f0 = {f0[idx]:0.2f}, h1h2 = {h1h2[idx]:0.2f}")
 
-    odds = np.exp(8.65 + (0.16*rms) - (0.83*c))  # logistic formula, trained on ASC corpus
+
+    odds = np.exp(8.32 + (0.149*rms) - (0.616*c) - (0.0062*h2h1))  # logistic formula, trained on ASC corpus
     probv = odds / (1 + odds)
     voiced = probv > 0.5
 
-    return DataFrame({'sec': ts, 'f0':f0, 'rms':rms, 'h2h1':h2h1, 'c':c, 'probv': probv, 'voiced':voiced})
+    return DataFrame({'sec': ts, 'f0':f0, 'rms':rms, 'h2h1':h2h1, 'C':c, 'probv': probv, 'voiced':voiced})
 

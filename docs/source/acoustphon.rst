@@ -23,11 +23,9 @@ Formant Tracking
 
 Pitch Tracking
 --------------
-.. autofunction:: phonlab.get_f0_B93
+.. autofunction:: phonlab.get_f0
 .. autofunction:: phonlab.get_f0_acd
-.. autofunction:: phonlab.get_f0_sift
 .. autofunction:: phonlab.get_f0_srh
-.. autofunction:: phonlab.get_f0_ac
 .. autofunction:: phonlab.pitch_to_df
 
 Voice Quality
