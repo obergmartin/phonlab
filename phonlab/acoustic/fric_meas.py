@@ -106,7 +106,7 @@ Note
 References
 ==========
 
-    K. Forrest, G. Weismer, P. Milenkovic, and R.N. Dougall (1988). Statistical analysis of word-initial voiceless obstruents: Preliminary data. `J. Acoust. Soc. Am.` 84(1), 115–123.
+    K. Forrest, G. Weismer, P. Milenkovic, and R.N. Dougall (1988) Statistical analysis of word-initial voiceless obstruents: Preliminary data. `J. Acoust. Soc. Am.` 84(1), 115–123.
 
     C. Shadle (2023) Alternatives to moments for characterizing fricatives: Reconsidering Forrest et al. (1988). `J. Acoust. Soc. Am.` 153 (2): 1412–1426. https://doi.org/10.1121/10.0017231
 

@@ -35,6 +35,7 @@ Voice Quality
 .. autofunction:: phonlab.gci_sedreams
 .. autofunction:: phonlab.compute_cepstrogram
 .. autofunction:: phonlab.CPP
+.. autofunction:: phonlab.HNR
 
 Consonant Features
 ------------------

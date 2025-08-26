@@ -45,8 +45,7 @@ Returns
 
 References
 ==========
-    T. Drugman, J. Kane, C. Gobl (2012) Resonator-based Creaky Voice Detection. INTERSPEECH 2012, 
-    ISCA's 13th Annual Conference Portland, OR, USA, September 9-13, 2012
+    T. Drugman, J. Kane, C. Gobl (2012) Resonator-based Creaky Voice Detection. INTERSPEECH 2012, ISCA's 13th Annual Conference Portland, OR, USA, September 9-13, 2012
 
 Example
 =======

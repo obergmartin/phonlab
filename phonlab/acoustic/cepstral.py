@@ -48,7 +48,7 @@ References
     half_frame = round(frame_length/2)
     frame_length = half_frame * 2 + 1    # odd number in frame
     NFFT = int(2**(np.ceil(np.log(frame_length)/np.log(2))))
-    quef = (np.array(range(int(NFFT/2)))/fs *1000)  # the quefrecy axis of the cepstra (in ms)
+    quef = (np.array(range(NFFT//2))/fs *1000)  # the quefrecy axis of the cepstra (in ms)
     frames = util.frame(x,frame_length=frame_length, hop_length=step,axis=0)
 
     nb = frames.shape[0]
