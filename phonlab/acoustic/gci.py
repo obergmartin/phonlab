@@ -123,18 +123,15 @@ The example here shows glottal closure instances for a small 40 millisecond wind
         plt.axhline(0.1)   
         plt.axhline(-0.1)
 
-The figure here shows major peaks and COG in several different fricatives.
+The figure here shows the derived waves used in finding GCIs.  In the top trace, the sound wave is shown in blue and the glottal closure instants (GCIs) are shown with red vertical lines.  In the bottom trace, the mean-based signal is shown in orange and the LPC residual is in cyan.  Horizontal lines show the threshold (cthresh=0.1) for considering a peak in the residual to be a possible GCI.
+
 
     .. figure:: images/gci.png
        :scale: 50 %
        :alt: Results of the above code showing the derived waves used in finding GCIs.
        :align: center
 
-       Results of the above code showing the derived waves used in finding GCIs.  In the top trace, 
-       the sound wave is shown in blue and the GCIs are shown with red vertical lines.  In the bottom
-       trace, the mean-based signal is shown in orange and the LPC residual is in cyan.  Horizontal 
-       lines show the threshold (cthresh=0.1) for considering a peak in the residual to be a possible GCI.
-
+       
     '''
     
     y,fs = prep_audio(x,fs,target_fs=16000,pre=0,quiet=True)
