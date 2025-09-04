@@ -1,5 +1,5 @@
 __name__="phonlab"
-__version__="0.0.31"
+__version__="0.0.32"
 
 # -------- functions in the "acoustic" portion of the package -------
 from .acoustic.sgram_ import *
@@ -16,6 +16,7 @@ from .acoustic.gci import *
 from .acoustic.cepstral import *
 from .acoustic.h2h1_ import *
 from .acoustic.get_HNR import *
+from .acoustic.shr import *
 
 __all__ = acoustic.sgram_.__all__.copy()
 __all__ += acoustic.burst_detect.__all__
@@ -31,6 +32,7 @@ __all__ += acoustic.gci.__all__
 __all__ += acoustic.cepstral.__all__
 __all__ += acoustic.h2h1_.__all__
 __all__ += acoustic.get_HNR.__all__
+__all__ += acoustic.shr.__all__
 
 # -------- functions in the "auditory" portion of the package ---------
 from .auditory.sigcor import *

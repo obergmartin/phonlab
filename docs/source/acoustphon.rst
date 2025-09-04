@@ -12,7 +12,6 @@ Amplitude Contour
 .. autofunction:: phonlab.get_rms
 .. autofunction:: phonlab.intensity_to_df
 
-
 Formant Tracking
 ----------------
 .. autofunction:: phonlab.track_formants	
@@ -24,6 +23,7 @@ Formant Tracking
 Pitch Tracking
 --------------
 .. autofunction:: phonlab.get_f0
+.. autofunction:: phonlab.shr_pitch
 .. autofunction:: phonlab.get_f0_acd
 .. autofunction:: phonlab.get_f0_srh
 .. autofunction:: phonlab.pitch_to_df
