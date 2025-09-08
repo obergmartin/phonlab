@@ -152,7 +152,7 @@ The figure here shows the derived waves used in finding GCIs.  In the top trace,
     while imin[-1]>imax[-1]:
         imin = np.delete(imin,-1)
 
-    resid,fs = lpcresidual(y,fs,o = order)
+    resid,fs = lpcresidual(y,fs,order = order)
     
     # get some big residual peaks -- to find an estimate for where to find the GCI in the MBS
     rp,_ = find_peaks(resid,height=0.3)

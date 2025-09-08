@@ -85,7 +85,7 @@ Take the right channel, and resample to 16,000 Hz
     if (np.max(x2) + np.min(x2)) < 0:  x2 = -x2   #  set the polarity of the signal
     if (pre > 0): y = np.append(x2[0], x2[1:] - pre * x2[:-1])  # apply pre-emphasis
     else: y = x2
-    if scale: y = y/np.max(y) * 0.99  # scale to about full range
+    if scale: y = y/np.max(y) * 0.9  # scale to about full range
     if outtype == "int":  y = np.rint(np.iinfo(np.int16).max * y).astype(np.int16)
     if outtype == "int16":  y = np.rint(np.iinfo(np.int16).max * y).astype(np.int16)
 

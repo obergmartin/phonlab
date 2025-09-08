@@ -159,6 +159,8 @@ This example plots the cepstral peak prominence through the "I'm twelve" example
     
     if smooth:
         Sxx = gaussian_filter(Sxx,sigma = smooth,truncate=3)
+        
+    Sxx = np.nan_to_num(Sxx) # replaces NaN with 0
 
     sT = int(np.round(fs/f0_range[1]))  # the shortest expected pitch period
     lT = int(np.round(fs/f0_range[0])) # the longest expected pitch period
@@ -169,9 +171,9 @@ This example plots the cepstral peak prominence through the "I'm twelve" example
 
     if norm:
         # hard coding here the range for the linear regression CPP normalization
-        low = int(np.round(fs/500)) # was [300,60] in Hillenbrand & Houde
-        high = int(np.round(fs/50)) # was [300,60] in Hillenbrand & Houde
-        X = np.array(np.arange(sT,lT,1))  # line fitting in the f0 region only
+        sT = int(np.round(fs/500)) # was [300,60] in Hillenbrand & Houde
+        lT = int(np.round(fs/50)) # was [300,60] in Hillenbrand & Houde
+        X = np.array(np.arange(sT,lT,1))  # line fitting in the f0 region
         X = np.reshape(X,(len(X),1))
         reg =LinearRegression().fit(X,y=Sxx[:,sT:lT].T)  # vectorized regressions
         p = np.diag(reg.predict(np.reshape(cp,(-1,1))))

@@ -7,7 +7,7 @@ from tensorflow.signal import overlap_and_add
 
 from ..utils.prep_audio_ import prep_audio
 
-def lpcresidual(y, fs, target_fs=16000, o = 18, l=0.04, s=0.005):    
+def lpcresidual(y, fs, target_fs=16000, order = 18, l=0.04, s=0.005):    
     """Compute the residual signal which results from filtering the input array **y** using LPC inverse filtering.  
 This signal is useful in voice quality and periodicity routines.
 
@@ -21,7 +21,7 @@ Parameters
         Sampling rate of **y**
     target_fs: int, default = 16000
         Algorithms from the covarep library of voice analysis routines require target_fs=16000
-    o: integer, default = 18
+    order: integer, default = 18
         The "order" of the LPC analysis.  The number of coefficients to use in the LPC analysis.  
         The default value is that recommended by Drugman, Kane, and Gobl (2013) for voice quality
         analysis (fs/1000 + 2), with the caveat that a smaller number may be more appropriate for 
@@ -50,7 +50,7 @@ Returns
     frames = util.frame(x, frame_length=frame_length, hop_length=step,axis=0)   # view as frames
     frames = np.multiply(frames,windows.hamming(frame_length))   # apply a Hamming window to each frame
 
-    A = lpc(frames, order=o)  # get lpc coefficients
+    A = lpc(frames, order=order)  # get lpc coefficients
     inv = fftconvolve(frames,A,mode="same",axes=1) # inverse filter, 
     inv = inv * np.sum(np.square(frames))/np.sum(np.square(inv))
     

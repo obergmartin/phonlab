@@ -8,7 +8,7 @@ from numpy.fft import rfft, irfft
 from pandas import DataFrame
 import matplotlib.pyplot as plt
 
-def HNR(x,fs, F0_range = [64,400], l= 0.06, s=0.005, target_time = None):
+def HNR(x,fs, f0_range = [64,400], l= 0.06, s=0.005, target_time = None):
     '''Compute the Harmonics-to-Noise Ratio using the Cepstrum-Based method given by de Krom (1993).
 The matlab implementation by Yen-Liang Shue (2009) which is a part of the VoiceSauce collection of 
 software provided some valuable pointers in how to implement de Krom's method.  One difference between
@@ -48,6 +48,7 @@ The columns in the returned dataframe are for each frame of audio:
     * f0 - estimate of the fundamental frequency in Hz
     * hnr_500 - The harmonics-to-noise ratio in the spectrum below 500Hz
     * hnr_1500 - The harmonics-to-noise ratio in the spectrum below 1500Hz
+    * hnr_2500 - The harmonics-to-noise ratio in the spectrum below 2500Hz
 
 
 References
@@ -76,7 +77,7 @@ at time 2.1 seconds in the file 'sf3_cln.wav'. In the top panel we see the log m
 
 
     '''
-    x,fs = prep_audio(x,fs,target_fs=16000)
+    x,fs = prep_audio(x,fs,target_fs=16000,quiet=True)
     
     frame_length = int(l*fs)
     step = int(s*fs)
@@ -93,9 +94,9 @@ at time 2.1 seconds in the file 'sf3_cln.wav'. In the top panel we see the log m
     S = 20 * np.log10(np.abs(rfft(w*frames,NFFT)))
     C = np.real(irfft(S,NFFT))  # spectrum of the spectrum 
 
-    if F0_range[0]<F0_range[1]:
-        F0_range = np.flip(F0_range)  # from [60,400] -> [400,60]
-    T0_range = np.round(fs/np.array(F0_range)).astype(np.int32)
+    if f0_range[0]<f0_range[1]:
+        f0_range = np.flip(f0_range)  # from [60,400] -> [400,60]
+    T0_range = np.round(fs/np.array(f0_range)).astype(np.int32)
     T0 = np.argmax(C[:,T0_range[0]:T0_range[1]],axis=-1) + T0_range[0]  # F0 period
     F0 = fs/T0
     
@@ -126,9 +127,12 @@ at time 2.1 seconds in the file 'sf3_cln.wav'. In the top panel we see the log m
     
     i500 = int(500/fs * NFFT)  # index at 500 Hz
     i1500 = int(1500/fs * NFFT)
+    i2500 = int(2500/fs * NFFT)
 
     HNR500 = np.mean(H[:,:i500],axis=-1) - np.mean(N[:,:i500],axis=-1)
     HNR1500 = np.mean(H[:,:i1500],axis=-1) - np.mean(N[:,:i1500],axis=-1)
+    HNR2500 = np.mean(H[:,:i2500],axis=-1) - np.mean(N[:,:i2500],axis=-1)
+
 
     # ------------- diagnostic plot ---------------
     if target_time != None:
@@ -147,4 +151,4 @@ at time 2.1 seconds in the file 'sf3_cln.wav'. In the top panel we see the log m
         ax2.plot(quef[2:NFFT//2],C_cl[fn,2:NFFT//2],color='pink')
         ax2.axvline(quef[T0[fn]],color='black',alpha=0.2)
 
-    return DataFrame({'sec': ts, 'f0':F0, 'hnr_500':HNR500, 'hnr_1500':HNR1500})
+    return DataFrame({'sec': ts, 'f0':F0, 'hnr_500':HNR500, 'hnr_1500':HNR1500, 'hnr_2500':HNR2500})

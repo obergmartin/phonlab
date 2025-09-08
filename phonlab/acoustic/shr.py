@@ -19,7 +19,7 @@ def _maxarg(x,axis = -1):
         
     return idx,val
 
-def shr_pitch(x,fs, f0_range=[64,400], l=0.04, s=0.005, shr_threshold = 0.3, top_freq = 1000, target_time=None):
+def shr_pitch(x,fs, f0_range=[64,400], l=0.04, s=0.005, shr_threshold = 0.15, top_freq = 1000, target_time=None):
     '''An implementation of Xuejing Sun's (2002) SubHarmonic-to-Harmonic Ratio (SHR) pitch determination method.  
 This method is a variant of Hermes' (1988) subharmonic summation method.  In addition to computing pitch, the 
 function returns the SHR when there is a measureable subhamonic component, otherwise the value is NaN.  
@@ -41,9 +41,9 @@ Parameters
         Length of analysis windows.  The default is 40 milliseconds.
     s : float, default = 0.005
         Step size, of hops between analysis windows. The default is 5 milliseconds.
-    shr_threshold : float, default = 0.3
-        A value between 0 and 0.5, which determines how sensitive the algorithm is in deciding that a subharmonic 
-        component is present in the voicing spectrum. 
+    shr_threshold : float, default = 0.15
+        A value which determines how sensitive the algorithm is in deciding that a subharmonic 
+        component is present in the voicing spectrum (. 
     top_frequency : int, default = 1000 (Hz)
         The spectrum will be limited to this top frequency
     target_time : float, default = None
@@ -60,7 +60,7 @@ Note
 The columns in the returned dataframe are for each frame of audio:
     * sec - time at the midpoint of each frame in seconds
     * f0 - estimate of the fundamental frequency in Hz
-    * SHR - The Subharmonic-to-harmonic Ratio.  If the ratio is low the subharmonic energy is close to that in the harmonic spectrum.
+    * shr - The Subharmonic-to-harmonic Ratio.  If the ratio is low the subharmonic energy is close to that in the harmonic spectrum.
     
 References
 ==========
@@ -130,7 +130,7 @@ This example shows diagnostic plots from the shr_pitch() function. The top left 
 
     frames = util.frame(y,frame_length=frame_length, hop_length=step,axis=0)
     nb = frames.shape[0]
-    SHR = np.zeros(nb)
+    SHR = np.ones(nb) * np.nan
     F0 = np.ones(nb) * np.nan
     
     w = np.blackman(frame_length)
@@ -163,13 +163,22 @@ This example shows diagnostic plots from the shr_pitch() function. The top left 
     step2 = round(np.log2(2 + 0.0625)/minbin)
     s = idx1 + step1 # where to find the possible harmonic peak
     e = idx1 + step2
-    top = min(s_points,upperbound)
-    e = np.where(e>top,top,e)
+    #top = min(s_points,upperbound)
+    e = np.where(e>s_points,s_points,e)
     
     idx2,mag2 = np.array([_maxarg(DA[i,s[i]:e[i]]) for i in range(nb)]).T
     idx2 = (idx2 + s).astype(np.int16)
-    SHR = np.where(idx2>upperbound,np.nan,np.where(mag2<=0,np.nan,(mag1-mag2)/(mag1+mag2)))
-    F0 = np.where(SHR<shr_threshold,ifreq[idx2]*2,ifreq[idx1]*2)
+    
+    # if start > upperbound - then idx2,mag2 are invalid - f0 = ifreq[idx1]*2, SHR = 0
+    # if mag1 < 0 - then f0 = np.nan, SHR = np.nan
+    # if mag2 < 0 - then f0 = ifreq[idx1]*2, SHR = 0
+   
+    mask = (s<upperbound) & (mag1>0) & (mag2>0)   # constraints on calculating SHR
+    SHR[mask] = (mag1[mask]-mag2[mask])/(mag1[mask]+mag2[mask])
+    SHR = np.where(mag1<=0,np.nan,SHR)
+    SHR = np.where(mag2<=0,0,SHR)
+    F0 = np.where(mag1>0,ifreq[idx1]*2,np.nan)
+    F0 = np.where(SHR<shr_threshold,ifreq[idx2]*2,F0)
     F0 = np.where(F0>f0_range[1],F0/2, F0)
 
     ts = (np.array(range(nb)) * step + half_frame)/fs  # time axis for output
@@ -188,4 +197,4 @@ This example shows diagnostic plots from the shr_pitch() function. The top left 
         print(f"SHR={SHR[fn]}, F0={F0[fn]}, N={N}, s={s[fn]}, e={e[fn]}, upperbound = {upperbound}")
         print(f"   (idx1={ifreq[idx1[fn]]}, mag1={mag1[fn]}), (idx2={ifreq[idx2[fn]]}, mag2={mag2[fn]})")
 
-    return DataFrame({'sec': ts, 'f0': F0, 'SHR': SHR})
+    return DataFrame({'sec': ts, 'f0': F0, 'shr': SHR})

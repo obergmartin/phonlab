@@ -11,6 +11,7 @@ from scipy import linalg
 from ..utils.prep_audio_ import prep_audio
 from ..acoustic.lpc_residual import lpcresidual
 
+np.seterr(divide="ignore")
 
 def get_rms(y, fs, s=0.005, l=0.04, scale=False):
     """Measure the time-varying root mean square (RMS) amplitude of the signal in **y**.
@@ -131,7 +132,7 @@ def get_f0(y, fs, f0_range = [63,400], s= 0.005):
     rw = rw/np.max(rw)
 
     # ------- autocorrelations of all of the frames in the file -----------
-    Sxx = fft.fft(w*frames,N)
+    Sxx = fft.fft(w*frames,N)+0.000001
     ra = fft.fft(np.square(np.abs(Sxx)),N)
     ra = np.divide(ra.T,np.max(ra,axis= -1)).T  # frame by frame normalization
 
@@ -146,6 +147,7 @@ def get_f0(y, fs, f0_range = [63,400], s= 0.005):
     f0 = 1/(lag/fs)  # convert lags into f0
     rms = 10 * np.log10(np.sqrt(np.divide(np.sum(np.square(np.abs(Sxx)),axis=1),f))) 
     c = np.array([np.abs(np.max(rx[i,s_lag:l_lag])) for i in range(nb)])
+    c = np.where(c==1,0.999,c)
     HNR = 10 * np.log10(c/(1-c),where=np.where(c<1,True,False),out=np.zeros(c.shape))
 
     # voicing decision
@@ -266,8 +268,8 @@ T. Drugman, A. Alwan (2011) Joint robust voicing detection and pitch estimation 
     frames = util.frame(resid,frame_length=frame_length, hop_length=step,axis=0)    
     frames = np.multiply(frames,w)   # apply a Hamming window to each frame, for lpc
     
-    Sxx = np.abs(np.fft.rfft(frames,2**14))           # spectrogram of the residual
-    Sxx = np.divide(Sxx.T,linalg.norm(Sxx,axis=-1)).T # amplitude normalized
+    Sxx = np.abs(np.fft.rfft(frames,2**14))+0.00001      # spectrogram of the residual
+    Sxx = np.divide(Sxx.T,linalg.norm(Sxx,axis=-1)).T    # amplitude normalized
 
     f0,SRHval =  SRH(Sxx,fs,f0_range)
     F0med = int(np.nanmedian(np.where(SRHval<0.1,f0,np.nan)))
@@ -508,13 +510,14 @@ Example
     w = windows.hamming(frame_len)
     f,ts,Sxx = spectrogram(x,fs=fs,noverlap = noverlap, window=w, nperseg = frame_len, 
                               nfft = N, scaling = 'spectrum', mode = 'magnitude', detrend = 'linear')
+    Sxx = Sxx + 0.0001
     rms = 20 * np.log10(np.sqrt(np.divide(np.sum(np.square(Sxx),axis=0),len(f)))) 
     Sxx = 20 * np.log10(Sxx)
 
     nb = len(ts)  # the number of frames in the spectrogram
     f0 = np.full(nb,np.nan)  # array filled with nan
-    h2h1 = np.full(nb,np.nan)        # array filled with nan
-    c = np.full(nb,5.0)      # default value of c is 5.0
+    h1h2 = np.full(nb,np.nan)        # array filled with nan
+    c = np.full(nb,11.0)      # default value of c is 5.0
         
     min_dist = int(f0_range[0]/(fs/N)) # min distance btw harmonics
     max_dist = int(f0_range[1]/(fs/N))
@@ -545,7 +548,7 @@ Example
                         c[idx] = C      
                         i_f0 = np.argmin(np.fabs(_f0 - f)) # f index that is closest to f0
                         i_2f0 = np.argmin(np.fabs((2 * _f0) - f)) # closest to 2f0 for (h1h2)
-                        h2h1[idx] = spec[i_2f0] - spec[i_f0]
+                        h1h2[idx] = spec[i_f0] - spec[i_2f0]
                         f0[idx] = _f0
 
         if idx==i_test:  # show diagnostic info, only at a target frame
@@ -565,9 +568,9 @@ Example
             print(f"time = {test_time}, f0 = {f0[idx]:0.2f}, h1h2 = {h1h2[idx]:0.2f}")
 
 
-    odds = np.exp(8.32 + (0.149*rms) - (0.616*c) - (0.0062*h2h1))  # logistic formula, trained on ASC corpus
+    odds = np.exp(8.32 + (0.149*rms) - (0.616*c) - (0.0062*h1h2))  # logistic formula, trained on ASC corpus
     probv = odds / (1 + odds)
     voiced = probv > 0.5
 
-    return DataFrame({'sec': ts, 'f0':f0, 'rms':rms, 'h2h1':h2h1, 'C':c, 'probv': probv, 'voiced':voiced})
+    return DataFrame({'sec': ts, 'f0':f0, 'rms':rms, 'h1h2':h1h2, 'C':c, 'probv': probv, 'voiced':voiced})
 
