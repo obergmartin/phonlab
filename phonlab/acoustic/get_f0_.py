@@ -145,7 +145,7 @@ def get_f0(y, fs, f0_range = [63,400], s= 0.005):
     # ---- compute columns for Dataframe -------
     sec = (np.array(range(nb)) * step + half_frame)/fs
     f0 = 1/(lag/fs)  # convert lags into f0
-    rms = 10 * np.log10(np.sqrt(np.divide(np.sum(np.square(np.abs(Sxx)),axis=1),f))) 
+    rms = 20 * np.log10(np.sqrt(np.sum(np.square(np.abs(Sxx)),axis=-1))) 
     c = np.array([np.abs(np.max(rx[i,s_lag:l_lag])) for i in range(nb)])
     c = np.where(c==1,0.999,c)
     HNR = 10 * np.log10(c/(1-c),where=np.where(c<1,True,False),out=np.zeros(c.shape))
@@ -228,15 +228,13 @@ Returns
 =======
     df : pandas DataFrame  
         measurements at 5 msec intervals.
-    f0_range : a list of two integers
-        the adaptively adjusted f0 range
 
 Note
 ====
 The columns in the returned dataframe are for each frame of audio:
     * sec - time at the midpoint of each frame
     * f0 - estimate of the fundamental frequency
-    * rms - peak normalized rms amplitude in the band from 0 to 5 kHz
+    * rms - rms amplitude in the band from 0 to 5 kHz
     * srh - value of SRH (normalized sum of the residual harmonics)
     * probv - estimated probability of voicing
     * voiced - a boolean decision based on the srh value (see Drugman and Alwan)
@@ -256,8 +254,8 @@ T. Drugman, A. Alwan (2011) Joint robust voicing detection and pitch estimation 
     
     # ----- get rms amplitude from audio wav -------------
     rms = feature.rms(y=x,frame_length=frame_length,hop_length=step,center=False)
-    rms = 20*np.log10(rms[0]/np.max(rms[0]))
-
+    rms = 20 * np.log10(rms[0]) 
+    
     # ---- get the f0 from the sum of the residual harmonics (srh) -------------
     if isResidual:
         resid = x

@@ -56,6 +56,7 @@ Note
 The columns in the returned dataframe are for each frame of audio:
     * sec - time at the midpoint of each frame in seconds
     * f0 - estimate of the fundamental frequency in Hz
+    * rms - rms amplitude in the frequency band from 0 to fs/2
     * shr - The Subharmonic-to-harmonic Ratio.  If the ratio is low the subharmonic energy is close to that of the harmonic.
     
 References
@@ -128,10 +129,13 @@ This example shows diagnostic plots from the get_f0_shs() function. The top left
 
     frames = util.frame(y,frame_length=frame_length, hop_length=step,axis=0)
     nb = frames.shape[0]
+    f = frames.shape[1]  # number of frequency steps
     
     w = np.blackman(frame_length)
-    S = np.abs(rfft(w*frames,NFFT))[:,1:limit]  # spectrogram below topfreq
-    interp_function = interp1d(logf, S) 
+    S = np.abs(rfft(w*frames,NFFT))  # spectrogram below topfreq
+    Sxx = S[:,1:limit]
+    rms = 20 * np.log10(np.sqrt(np.sum(np.square(np.abs(Sxx)),axis=-1))) 
+    interp_function = interp1d(logf, Sxx) 
     logS = interp_function(ilogf)
     W = 0.5 + (1/np.pi)*np.arctan(5*(ilogf-np.log2(60)))  # W function (Hermes, 1988) to damp freqs below 60
     logS = W * logS
@@ -196,7 +200,7 @@ This example shows diagnostic plots from the get_f0_shs() function. The top left
         print(f"   idx1={ifreq[idx1[fn]]:0.1f}, idx2={ifreq[idx2[fn]]:0.1f}, shr = {SHR[fn]:0.3f}")
         print(f"   mag1={mag1[fn]:0.3f}, mag2={mag2[fn]:0.3f}")
 
-    return DataFrame({'sec': ts, 'f0': F0, 'shr': SHR})
+    return DataFrame({'sec': ts, 'f0': F0, 'rms':rms, 'shr': SHR})
 
 def _shr_pitch(x,fs, f0_range=[64,400], l=0.04, s=0.005, shr_threshold = 0.15, top_freq = 1000, target_time=None):
     '''An implementation of Xuejing Sun's (2002) SubHarmonic-to-Harmonic Ratio (SHR) pitch determination method.  
