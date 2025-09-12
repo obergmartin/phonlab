@@ -17,7 +17,7 @@ def get_mbs(x,fs, f0median, width = 1.4):
     
     # calculate the MeanBased Signal - smooth with a window that is 1.4 glottal pulses wide
     t0mean = round(fs/f0median)  # expected number of samples per glottal cycle
-    halfL = round(0.7*t0mean)     # using a factor of 1.4 (0.7*2) instead of 1.75
+    halfL = round((0.5*width)*t0mean)     # using a factor of 1.4 (0.7*2) instead of 1.75
     w = windows.blackman(2*halfL +1)  # the length of the smoothing filter is critical
     mbs = filtfilt(w,1,x)  # smooth audio with blackman window, for mean-based signal
 
@@ -48,14 +48,11 @@ added a process to choose different LPC orders for different f0medians.
 If you don't explicitly specify and LPC order one will be chosen for you.  This differs from D&D in that 
 they just used order=18 for everything.  This doesn't seem to change much in the operation of this function.
 
-The other parameter that I added is a threshold for peaks in the residual function. Changing this parameter does 
-change the output of the function quite a lot.  The algorithm looks for
+The other parameter that I added is a threshold for peaks in the residual function. Changing this parameter does change the output of the function quite a lot.  The algorithm looks for
 a peak in a temporal span of the residual in each presumed glottal cycle and reports the location of that peak 
 as the location of the glottal closing instant.  With the **cthresh** parameter the user is given the option
 of disregarding intervals that have weak evidence of a glottal closure.  D&D used cthresh=0, resulting
-in a lot of apparent jitter in regions where the actual f0 is much lower than f0median.  If you add a threshold,
-the algorithm gets rejects candidate GCIs for which there is weak evidence of glottal closure.  This may
-be a mistake for breathy voice.  Further testing is needed.
+in a lot of apparent jitter in regions where the actual f0 is much lower than f0median.  If you add a threshold, the algorithm rejects candidate GCIs for which there is weak evidence of glottal closure.  This may be a mistake for breathy voice.  Further testing is needed.
 
 Parameters
 ==========
@@ -70,9 +67,9 @@ Parameters
         By default the order used in LPC analysis (to calculate the LPC residual signal) is guessed
         based on the value of F0median.  Drugmand & Dutoit (2009) used order=18.
     cthresh: float, default = 0.1
-        Threshold for residual peaks.  A peak in the LPC residual must be greater than this in 
+        A peak in the LPC residual must be greater than this thresholf value in 
         in order to be considered a glottal closure instant.  The residual is amplitude normalized 
-        to the range [0,1], so 0.1 is 10% of the range.
+        to the range [0,1], so 0.1 is 10% of the amplitude range.
 
 Returns
 =======
