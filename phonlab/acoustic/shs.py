@@ -20,11 +20,7 @@ def _maxarg(x,axis = -1):
     return idx,val
 
 def get_f0_shs(x,fs, f0_range=[50,400], l=0.06, s=0.005, shr_threshold = 0.3, target_time=None):
-    ''' A pitch determination function implementing the subharmonic summation (SHS) algorithm proposed by Dik Hermes (1988), 
-with a method of finding the relative amplitude of a subharmonic pitch (if there is evidence of a subharmonic) as 
-suggested by Xuejing Sun's (2002). The method is good at tracking pitch changes when the voice goes into creak, and is relatively
-insensitive to the setting of the f0_range parameter.  If you find that there is pitch halving, try increasing the shr_threshold, 
-and if you find pitch doubling try decreasing shr_threshold and/or the top end of the f0_range.
+    ''' A pitch determination function implementing the subharmonic summation (SHS) algorithm proposed by Dik Hermes (1988), with a method of finding the relative amplitude of a subharmonic pitch (if there is evidence of a subharmonic) as suggested by Xuejing Sun's (2002). The method is good at tracking pitch changes when the voice goes into creak, and is relatively insensitive to the setting of the f0_range parameter.  If you find that there is pitch halving, try increasing the shr_threshold, and if you find pitch doubling try decreasing shr_threshold and/or the top end of the f0_range.
 
     
 Parameters
@@ -226,7 +222,7 @@ Parameters
         Step size, of hops between analysis windows. The default is 5 milliseconds.
     shr_threshold : float, default = 0.15
         A value which determines how sensitive the algorithm is in deciding that a subharmonic 
-        component is present in the voicing spectrum (. 
+        component is present in the voicing spectrum. 
     top_frequency : int, default = 1000 (Hz)
         The spectrum will be limited to this top frequency
     target_time : float, default = None

@@ -34,8 +34,8 @@ def get_mbs(x,fs, f0median, width = 1.4):
 def gci_sedreams(x,fs,f0median=200,order=None,cthresh=0.0):
     '''Identify Glottal Closure instances (GCI) using Drugman & Dutoit's (2009) `sedreams` algorithm.  
 The function also returns f0 and vocal jitter, based on the derived GCI estimates.  Two parameters are
-given here which were not a part of the original implementation.  Based on a comment in D&D(2009), I 
-added a process to choose different LPC orders for different f0medians.  
+given here which were not a part of the original implementation.  Based on a comment in D&D(2009), the 
+function includes a process to choose different LPC orders for different f0medians.  
 
     .. code-block:: Python
 
@@ -48,10 +48,12 @@ added a process to choose different LPC orders for different f0medians.
 If you don't explicitly specify and LPC order one will be chosen for you.  This differs from D&D in that 
 they just used order=18 for everything.  This doesn't seem to change much in the operation of this function.
 
-The other parameter that I added is a threshold for peaks in the residual function. Changing this parameter does change the output of the function quite a lot.  The algorithm looks for
-a peak in a temporal span of the residual in each presumed glottal cycle and reports the location of that peak 
-as the location of the glottal closing instant.  With the **cthresh** parameter the user is given the option
-of disregarding intervals that have weak evidence of a glottal closure.  D&D used cthresh=0, resulting
+The other additional parameter is a threshold for peaks in the residual function. Changing this parameter 
+changes the output of the function quite a lot.  The algorithm looks for a peak in a temporal span 
+of the residual in each presumed glottal cycle and reports the location of that peak 
+as the location of the glottal closing instant, and height of the peak as the SOE (strength of excitation).  
+With the **cthresh** parameter the user is given the option of disregarding intervals that have 
+weak evidence of a glottal closure.  D&D used cthresh=0, resulting
 in a lot of apparent jitter in regions where the actual f0 is much lower than f0median.  If you add a threshold, the algorithm rejects candidate GCIs for which there is weak evidence of glottal closure.  This may be a mistake for breathy voice.  Further testing is needed.
 
 Parameters
@@ -83,9 +85,10 @@ Returns
 Note
 ====
 The columns in the returned DataFrame are:
-    * sec - the time points (in seconds) of each glottal closure instant. These are the GCI values.
-    * f0 - pitch of voicing, which is `1/t`, where `t` is the glottal period - the duration between adjacent GCI
+    * sec - the time points (in seconds) of each glottal closure instant. These are the GCI times.
+    * f0 - pitch of voicing, which is `1/t`, where `t` is the glottal period - the duration between adjacent GCI times.
     * jitter - the relative discrepancy between adjacent glottal period durations (call them t1 and t2). The value is calculated as `j = 2 * |0.5 - t1/(t1+t2)|`. This results in values on a scale from 0 (adjacent periods (t) are equal in duration), to 1 (the theoretical limit of jitter).  A value of 0.5 means that t1 is twice (or 1/2) as long as t2.  This corresponds to 1/2 of Praat's "local jitter" measurement (which is scaled from 0 to 2).
+    * soe - strength of excitation is the height of the LPC residual peak for each GCI
 
 References
 ==========
@@ -167,6 +170,8 @@ The figure here shows the derived waves used in finding GCIs.  In the top trace,
         ratioGCI = np.median(relpos)  # a reasonable expectation of where the GCI will be
     
     gci = np.full(len(imin),np.nan)  # initialize with nan values
+    soe = np.full(len(imin),np.nan)  # initialize with nan values
+
     idx = 0
     for k in range(len(imin)):
         t = imax[k] - imin[k]
@@ -177,7 +182,9 @@ The figure here shows the derived waves used in finding GCIs.  In the top trace,
         if stop > len(resid): stop = len(resid)
         if np.max(resid[start:stop]) > cthresh:  # threshold to posit glottal closure
             i = np.argmax(resid[start:stop])
+            soe[k] = np.max(resid[start:stop])
             gci[k] = start + i -1
+    soe = soe[~np.isnan(soe)]
     gci = gci[~np.isnan(gci)]  # remove rows that didn't get filled
     gci = (gci)/fs
     t1 = gci[1:]-gci[:-1]  # duration between adjacent GCI
@@ -187,6 +194,6 @@ The figure here shows the derived waves used in finding GCIs.  In the top trace,
     t2 = np.pad(t2,(0,2),mode='edge') # repeat the last two
     jitter = 2 * np.fabs(0.5 - (t1/t2)) # 0 = identical adjacent periods, 1 = one is twice as long as the other
 
-    df = DataFrame({'sec': gci, 'f0':f0, 'jitter':jitter})
+    df = DataFrame({'sec': gci, 'f0':f0, 'jitter':jitter, 'soe':soe})
     
     return df,mbs,resid
