@@ -15,6 +15,7 @@ Amplitude Contour
 Formant Tracking
 ----------------
 .. autofunction:: phonlab.track_formants	
+.. autofunction:: phonlab.track_formants_DPPT
 .. autofunction:: phonlab.formant_to_df
 .. autofunction:: phonlab.get_deltaF
 .. autofunction:: phonlab.deltaF_norm

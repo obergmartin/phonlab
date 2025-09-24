@@ -32,8 +32,8 @@ Parameters
         A Pandas dataframe produced by one of the get_f0 functions 
     f0med : float, default = None
         Normally the median f0 is computed from the f0 values in f0df with the 
-        line: `f0med = np.nanmedian(f0df.f0)`, but this parameter lets the user supply and 
-        estimateof the median f0 explicitly.
+        line: `f0med = np.nanmedian(f0df.f0)`, but this parameter lets the user supply an 
+        estimate of the median f0 explicitly.
     use_ac : boolean, default = True
         Following Drugman et al. (2012), the function by default finds H1 and H2 in the spectrum 
         of the autocorrelation function.

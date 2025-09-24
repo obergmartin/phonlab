@@ -127,8 +127,8 @@ def get_f0(y, fs, f0_range = [63,400], s= 0.005):
     
     # ----- Hann window and its autocorrelation ----------
     w = windows.hann(frame_length)
-    s = fft.fft(w,N)
-    rw = fft.fft(np.square(np.abs(s)),N) + 1
+    s = fft.fft(w,N) + 0.000001
+    rw = fft.fft(np.square(np.abs(s)),N)
     rw = rw/np.max(rw)
 
     # ------- autocorrelations of all of the frames in the file -----------
@@ -147,7 +147,7 @@ def get_f0(y, fs, f0_range = [63,400], s= 0.005):
     f0 = 1/(lag/fs)  # convert lags into f0
     rms = 20 * np.log10(np.sqrt(np.sum(np.square(np.abs(Sxx)),axis=-1))) 
     c = np.array([np.abs(np.max(rx[i,s_lag:l_lag])) for i in range(nb)])
-    c = np.where(c==1,0.999,c)
+    c = np.where(c>=1,0.999,c)
     HNR = 10 * np.log10(c/(1-c),where=np.where(c<1,True,False),out=np.zeros(c.shape))
 
     # voicing decision
@@ -200,9 +200,7 @@ formants. Then harmonics are found in the spectrum of the residual signal.
 Drugman and Alwan found that this technique provides an estimate of F0 that is 
 robust when the audio signal is corrupted by noise. 
 
-The f0 range is adaptively adjusted and the result of this is returned by the function.
-If you have multiple recordings of the same person, it would speed things up to 
-make use of this return value.
+The f0 range is adaptively adjusted.
 
 Probability of voicing is given from a logistic regression formula using `rms` and `srh` 
 trained to predict the voicing state as determined by EGG data using the function `phonlab.egg_to_oq()` 
@@ -219,8 +217,6 @@ Parameters
         The lowest and highest values to consider in pitch tracking. This algorithm is quite sensitive to the values given in this setting.
     isResidual : Boolean, default = False
         If the input array is a residual signal
-    l : float, default = 0.06
-        Length of the pitch analysis window in seconds. The default is 60 milliseconds.  
     s : float, default = 0.005
         "Hop" interval between successive analysis windows. The default is 5 milliseconds
 

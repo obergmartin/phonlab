@@ -32,10 +32,11 @@ def get_mbs(x,fs, f0median, width = 1.4):
 # GCI function
 
 def gci_sedreams(x,fs,f0median=200,order=None,cthresh=0.0):
-    '''Identify Glottal Closure instances (GCI) using Drugman & Dutoit's (2009) `sedreams` algorithm.  
-The function also returns f0 and vocal jitter, based on the derived GCI estimates.  Two parameters are
-given here which were not a part of the original implementation.  Based on a comment in D&D(2009), the 
-function includes a process to choose different LPC orders for different f0medians.  
+    '''Identify Glottal Closure instances (GCI) using Drugman & Dutoit's (2009) `sedreams` algorithm which 
+was published as a Matlab function in the Covarep repository.   The function also returns f0 and vocal jitter 
+based on the derived GCI estimates.  Two parameters are given here which were not a part of the original 
+implementation.  Based on a comment in D&D(2009), the function includes a process to choose different LPC 
+orders for different f0medians.  
 
     .. code-block:: Python
 

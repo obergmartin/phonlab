@@ -20,7 +20,7 @@ def _maxarg(x,axis = -1):
     return idx,val
 
 def get_f0_shs(x,fs, f0_range=[50,400], l=0.06, s=0.005, shr_threshold = 0.3, target_time=None):
-    ''' A pitch determination function implementing the subharmonic summation (SHS) algorithm proposed by Dik Hermes (1988), with a method of finding the relative amplitude of a subharmonic pitch (if there is evidence of a subharmonic) as suggested by Xuejing Sun's (2002). The method is good at tracking pitch changes when the voice goes into creak, and is relatively insensitive to the setting of the f0_range parameter.  If you find that there is pitch halving, try increasing the shr_threshold, and if you find pitch doubling try decreasing shr_threshold and/or the top end of the f0_range.
+    ''' A pitch determination function implementing the subharmonic summation (SHS) algorithm proposed by Dik Hermes (1988), with a method of finding the relative amplitude of a subharmonic pitch (if there is evidence of a subharmonic) as suggested by Xuejing Sun (2002). The method is good at tracking pitch changes when the voice goes into creak, and is relatively insensitive to the setting of the f0_range parameter.  If you find that there is pitch halving, try increasing the shr_threshold, and if you find pitch doubling try decreasing shr_threshold and/or the top end of the f0_range.
 
     
 Parameters
@@ -154,6 +154,7 @@ This example shows diagnostic plots from the get_f0_shs() function. The top left
     idx1 = np.argmax(Dxx[:,lowerbound:upperbound],axis= -1) 
     idx1 += lowerbound
     mag1 = np.max(Hxx[:,idx1],axis=-1)
+    mag1 = np.where(mag1>0,mag1,0.00001) # avoid 0/0 in SHR calculation
     
     # consider the possibility that idx1 is a subharmonic - look for harmonic peak at log2(f)+log2(1)
     step1 = round(np.log2(2 - 0.0625)/minbin) # search bounds for later, with subharmonics
@@ -168,7 +169,7 @@ This example shows diagnostic plots from the get_f0_shs() function. The top left
 
     idx2 = np.where(s>upperbound,idx1,idx2)
     mag2 = np.where(s>upperbound,mag1,mag2)
-    mag2 = np.where(mag2<0,mag1,mag2)
+    mag2 = np.where(mag2<=0,mag1,mag2)
 
     SHR = (mag1-mag2)/(mag1+mag2)
     SHR = np.where(SHR==0,np.nan,SHR)

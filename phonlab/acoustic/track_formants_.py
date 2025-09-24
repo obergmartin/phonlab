@@ -718,7 +718,7 @@ def choose_order(x,frame_length,fs):
     the number of LPC coefficients to use in calculating a fit to the spectrum.  Many
     authors propose a rule of thumb having to do with the expected number of formants
     in the analyzed frequency range.  This function takes an array of waveform samples,
-    limits it to just 2 seconds if it is longer than that, and calculates LPC coeffients
+    and calculates LPC coeffients
     at each of several orders [8,10,12,14,16] -- assuming that the fs is 12,0000 Hz.
     It then returns the order that produced the lowest A[1] over the span.  
 
@@ -947,15 +947,15 @@ Use Inverse Filter Control to track formants in a file
 
     df = phon.track_formants(x,fs,method='ifc',speaker=1)
 
-The next example uses LPC analysis, which by default will try to pick the correct `lpc_order` for the speaker.
-An array of samples is loaded by `prep_audio()` and then passed to `track_formants()`.  Then `sgram()` plots
+The next example uses LPC analysis, which by default will try to pick the best `lpc_order` for the speaker.
+An array of samples is loaded by `phon.loadsig()` and then passed to `phon.track_formants()`.  Then `phon.sgram()` plots
 the spectrogram of `x`, and the seaborn graphics package is used to add the formants to the spectrogram.
 
 .. code-block:: Python
 
     example_file = importlib.resources.files('phonlab') / 'data' / 'example_audio' / 'sf3_cln.wav'
     x,fs = phon.loadsig(example_file, chansel=[0])
-    fmtsdf = phon.track_formants(x, fs, method='ifc',speaker=2,f0_range=[60,350])
+    fmtsdf = phon.track_formants(x, fs)
 
     ret = phon.sgram(x,fs, tf=6000, cmap="Reds")  # plot the spectrogram
 
@@ -972,7 +972,7 @@ the spectrogram of `x`, and the seaborn graphics package is used to add the form
    :alt: a spectrogram with the estimated vowel formants marked with blue dots 
    :align: center
 
-   Plotting the formants found by `track_formants()` on the spectrogram of the utterance.
+   Plotting the formants found by `track_formants(... method='ifc')`, on the spectrogram of the utterance.
 
 """
 
