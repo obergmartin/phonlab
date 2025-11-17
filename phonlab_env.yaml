@@ -13,10 +13,10 @@ dependencies:
   - jupyter=1.1
   - librosa=0.10
   - srt=3.5
-  - tensorflow=2.19
   - scikit-learn=1.7
   - pip
   - pip:
+      - tensorflow
       - colorednoise==2.2
       - praat-parselmouth==0.4.5
       - phonlab
