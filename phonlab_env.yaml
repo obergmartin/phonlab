@@ -16,9 +16,9 @@ dependencies:
   - scikit-learn=1.7
   - pip
   - pip:
-      - tensorflow
       - colorednoise==2.2
       - praat-parselmouth==0.4.5
       - phonlab
+      - tensorflow
       - fileorganize
 
