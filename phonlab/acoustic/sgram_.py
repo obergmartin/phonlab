@@ -49,8 +49,22 @@ def compute_sgram(x,fs,w):
     return (f,ts, Sxx)
     
 
-def sgram(x,fs,chan=0,start=0,end=-1, tf=8000, band='wb',
-          preemph = 0.94, font_size = 14, min_prop = 0.2, save_name='',slice_time=-1,cmap='Greys'):
+def sgram(
+    x,
+    fs,
+    chan=0,
+    start=0,
+    end=-1,
+    tf=8000,
+    band='wb',
+    preemph = 0.94,
+    font_size = 14,
+    min_prop = 0.2,
+    save_name='',
+    slice_time=-1,
+    cmap='Greys',
+    ax=None,
+):
     """Make pretty good looking spectrograms
 
     * This function calls scipy.signal.spectrogram to calculate a magnitude spectrogram, which is then transformed to decibels, and passed to plt.imshow for plotting.  
@@ -180,15 +194,18 @@ def sgram(x,fs,chan=0,start=0,end=-1, tf=8000, band='wb',
     ts = np.add(ts,start)  # increment the spectrogram time by the start value
     dur = max(ts)-min(ts) + w   # scale figure size
     figwidth = np.min([(dur * inches_per_sec), max_figwidth])
-  
-    if slice_time>0: # if spectral slice is desired, add an axes for it
-        fig = plt.figure(figsize=(figwidth+slice_width, figheight),dpi=72)
-        gs = fig.add_gridspec(nrows=1, ncols=2, width_ratios=[figwidth/slice_width, 1])
-        ax1 = fig.add_subplot(gs[0])
-        ax2 = fig.add_subplot(gs[1])
+    if ax is None:
+        print(f"ax is None")
+        if slice_time>0: # if spectral slice is desired, add an axes for it
+            fig = plt.figure(figsize=(figwidth+slice_width, figheight),dpi=72)
+            gs = fig.add_gridspec(nrows=1, ncols=2, width_ratios=[figwidth/slice_width, 1])
+            ax1 = fig.add_subplot(gs[0])
+            ax2 = fig.add_subplot(gs[1])
+        else:
+            fig = plt.figure(figsize=(figwidth, figheight),dpi=72)
+            ax1 = fig.add_subplot(111)
     else:
-        fig = plt.figure(figsize=(figwidth, figheight),dpi=72)
-        ax1 = fig.add_subplot(111)
+        ax1 = ax
 
     vmin = np.min(Sxx) + (np.max(Sxx)-np.min(Sxx))*min_prop
     extent = (min(ts),max(ts),min(f),max(f))  # get the time and frequency values for indices.
@@ -200,6 +217,7 @@ def sgram(x,fs,chan=0,start=0,end=-1, tf=8000, band='wb',
     ax1.tick_params(labelsize=font_size)
 
     plt.subplots_adjust(left=0, bottom=0, right=1, top=1, wspace=0, hspace=0)
+    # plt.subplots_adjust(left=0.1, bottom=0.148, right=0.99, top=0.99, wspace=0, hspace=0)
    
     if slice_time > 0:  # if spectral slice is desired, plot the spectrum
         i = np.argmin(np.abs(ts-slice_time))  # find the index of the spectral slice
