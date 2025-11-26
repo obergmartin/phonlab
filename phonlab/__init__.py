@@ -60,7 +60,9 @@ __all__ += artic.egg2oq_.__all__
 #--------- functions in the 'load Audio' portion of the package ---------
 from .utils.signal import *
 from .utils.prep_audio_ import *
+from .utils.viewer import *
 
+__all__ += utils.viewer.__all__
 __all__ += utils.signal.__all__
 __all__ += utils.prep_audio_.__all__
 
