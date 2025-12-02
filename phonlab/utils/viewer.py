@@ -36,7 +36,6 @@ class Viewer:
         self.n_rows = 3
         lines = df2lines(df)
         self.lines = lines
-        
 
         self.fig, self.axs = plt.subplots(nrows=self.n_rows, ncols=1)
         for i in range(1, self.n_rows):
@@ -126,6 +125,8 @@ class Viewer:
 
         plt.show()
 
+    ## methods for updating visuals when user interacts with figure
+
     def play_segment(self, event):
         xlims = self.axs[0].get_xlim()
         s1 = self.current_span[0].get_x()
@@ -149,6 +150,32 @@ class Viewer:
         # this has problems because of seek position?
         subprocess.run(["ffplay", "-loglevel", "quiet", "-ss", f"{start_time}", "-t", f"{end_time}", "-nodisp", f"-autoexit", f"{self.fn}"])
 
+    def set_active_tier_boundary(self):
+        """Click on a tier boundary to move it.
+        """
+        # clear selection line
+        pass
+
+    def set_active_tier_segment(self):
+        """Click in a tier segment to higlight it.
+        """
+        # clear selection line
+        # update play button boundaries
+        pass
+
+    def set_active_span(self):
+        """Update active span across all axes.
+        """
+        # clear selection line
+        pass
+
+    def set_active_line(self):
+        """Click on a signal to get value.
+        Also allows adding/splitting segments.
+        """
+        # clear selection line
+        pass
+
     def resize_play_buttons(self):
         l, b, w, h =  self.axs[self.n_rows-1].get_position().extents
         xsz = np.diff(self.axs[self.n_rows-1].get_xlim())[0]
@@ -169,26 +196,18 @@ class Viewer:
         """
         self.epsilon = 5  # in n_pixels, make dependant on zoom level?
 
-        # xy = self.pathpatch.get_path().vertices
-        # print(f"{event.x=}")
         eventxt = self.tier_lines.get_transform().inverted().transform((event.x,event.y))
-        # print(f"{eventxt=}")
         xy = [(x,0) for x in self.lines]
         xyt = self.tier_lines.get_transform().transform(xy)  # to display coords
-        # print(f"{self.lines=}")
-        # print(f"{xyt=}")
-        # xt, yt = xyt[:, 0], xyt[:, 1]
-        # xt = xyt[:, 0]
         d = np.array([x[0] for x in xyt]) - event.x
-        # print(f"{d=}")
         ind = int(abs(d).argmin())
-        # print(f"{ind=}")
         if abs(d[ind]) < self.epsilon:
             return ind
         else:
-            # print(xyt, event.x)
             ind =  np.searchsorted([x[0] for x in xyt], event.x)
             return (ind-1, ind)
+
+    ## event callbacks
 
     def on_keypress(self, event):
         print('press', event.key)
@@ -203,9 +222,9 @@ class Viewer:
     def on_press(self, event):
         """Record the starting x-coordinate on button press."""
         # is click on existing:
-        # span
+        # tier span
         # span boundary
-        # 
+        # signal
         if event.inaxes == self.axs[2]:
             ind = self.get_ind_under_point(event)
             print(f"{ind=}")
@@ -258,7 +277,6 @@ class Viewer:
         # p = self.current_span.get_xy()
         # print(f"{s1=} {s2=}")
         # print(f"{p=}")
-
         # The final span is left on the plot by the last on_motion call
         self.start_x = None
 
