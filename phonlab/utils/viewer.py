@@ -1,20 +1,42 @@
 __all__=['Viewer']
 
+import sys
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.backend_bases import MouseButton
 from matplotlib.widgets import Button
 from matplotlib.patches import Rectangle
+from matplotlib.collections import LineCollection
 import subprocess
 from .signal import loadsig
 from phonlab import prep_audio
 from phonlab import sgram
 
 
+def df2lines(df):
+    lines = np.concat([df.t1.to_numpy(), [df.t2.iloc[-1]]])
+    return lines
+
+def df2texobj(df):
+    return zip(
+        df[['t1','t2']].mean(axis=1),
+        df.iloc[:, 2]
+    )
+
+
+
+def make_linecollection(lines):
+    lpts = [[(x,0), (x,1)] for x in lines]
+    return LineCollection(lpts)
+
+
 class Viewer:
-    def __init__(self, fn):
+    def __init__(self, fn, df):
         self.start_x = None
         self.n_rows = 3
+        lines = df2lines(df)
+        self.lines = lines
+        
 
         self.fig, self.axs = plt.subplots(nrows=self.n_rows, ncols=1)
         for i in range(1, self.n_rows):
@@ -27,6 +49,7 @@ class Viewer:
         sgram(wavdata, fs, tf=8000, ax=self.axs[1])
         plt.subplots_adjust(left=0.1, bottom=0.1, right=0.9, top=0.9, wspace=0, hspace=0)
 
+        cid_keypress = self.fig.canvas.mpl_connect('key_press_event', self.on_keypress)
         cid_press = self.fig.canvas.mpl_connect('button_press_event', self.on_press)
         cid_motion = self.fig.canvas.mpl_connect('motion_notify_event', self.on_motion)
         cid_release = self.fig.canvas.mpl_connect('button_release_event', self.on_release)
@@ -53,8 +76,18 @@ class Viewer:
             c="r",
             ls="--",
         )
+        self.line_kwargs = dict(
+            color="b",
+            ls="-",
+            lw=4,
+        )
         self.span_kwargs = dict(
             alpha=0.3,
+            ls="-",
+        )
+        self.seg_span_kwargs = dict(
+            alpha=0.3,
+            fill='g',
             ls="-",
         )
         self.seg_kwargs = dict(
@@ -70,15 +103,26 @@ class Viewer:
             for i, a in enumerate(self.axs)
             if i in self.line_axs
         ]
-
+        # collection of handles for selection span on axes
         self.current_span = [
             a.axvspan(1, 2, **self.span_kwargs)
             for i, a in enumerate(self.axs)
         ]
-
+        # selected tier segment
+        self.seg_span = self.axs[2].axvspan(-2,-1, **self.seg_span_kwargs)
+        # format lims for tier axes
         self.axs[2].get_yaxis().set_visible(False)
-        for t1, t2 in [[.2,.3], [.4,.5]]:
-            self.axs[2].axvspan(t1, t2, -0.1, 1.02, **self.seg_kwargs)
+        self.axs[2].get_yaxis().set_ticks([])
+        # 
+        # for t1 in self.lines:
+        #     # self.axs[2].axvspan(t1, t2, -0.1, 1.02, **self.seg_kwargs)
+        #     self.axs[2].axvline(t1, -0.1, 1.02, **self.line_kwargs)
+        self.tier_lines = make_linecollection(self.lines)
+        self.axs[2].add_collection(self.tier_lines)
+        for t, txt in df2texobj(df):
+            print(f"{t}", txt)
+            self.axs[2].text(t, 0.5, txt, ha="center")
+
 
         plt.show()
 
@@ -113,28 +157,76 @@ class Viewer:
         p1 =  ((s1/xsz)* (w-l))
         p2 =  ((s2/xsz)* (w-l))
         w3 = (xsz-s2)/xsz * (w-l)
-            
+
         self.axprev.set_position([l, b, p1, .05])
         self.axcur.set_position([l+p1, b, p2-p1, .05])
         self.axnext.set_position([l+p2, b, w3, .05])
 
+    def get_ind_under_point(self, event):
+        """
+        Return the index of the point closest to the event position or *None*
+        if no point is within ``self.epsilon`` to the event position.
+        """
+        self.epsilon = 5  # in n_pixels, make dependant on zoom level?
+
+        # xy = self.pathpatch.get_path().vertices
+        # print(f"{event.x=}")
+        eventxt = self.tier_lines.get_transform().inverted().transform((event.x,event.y))
+        # print(f"{eventxt=}")
+        xy = [(x,0) for x in self.lines]
+        xyt = self.tier_lines.get_transform().transform(xy)  # to display coords
+        # print(f"{self.lines=}")
+        # print(f"{xyt=}")
+        # xt, yt = xyt[:, 0], xyt[:, 1]
+        # xt = xyt[:, 0]
+        d = np.array([x[0] for x in xyt]) - event.x
+        # print(f"{d=}")
+        ind = int(abs(d).argmin())
+        # print(f"{ind=}")
+        if abs(d[ind]) < self.epsilon:
+            return ind
+        else:
+            # print(xyt, event.x)
+            ind =  np.searchsorted([x[0] for x in xyt], event.x)
+            return (ind-1, ind)
+
+    def on_keypress(self, event):
+        print('press', event.key)
+        sys.stdout.flush()
+        if event.key == 'x':
+            visible = xl.get_visible()
+            xl.set_visible(not visible)
+            fig.canvas.draw()
+        elif event.key == "ctrl+1":
+            print("adding sement on tier 1")
+
     def on_press(self, event):
         """Record the starting x-coordinate on button press."""
-        if event.inaxes != self.axs[0]: 
+        # is click on existing:
+        # span
+        # span boundary
+        # 
+        if event.inaxes == self.axs[2]:
+            ind = self.get_ind_under_point(event)
+            print(f"{ind=}")
+            if isinstance(ind, int):
+                lw = np.ones(len(self.lines), dtype=int) *2
+                lw[ind] = 4
+                self.tier_lines.set(linewidths=lw)
+            else:
+                print(f"{ind=}")
+                print(self.lines[ind[0]], self.lines[ind[1]])
+                # setspanhere
+                self.seg_span.set_x(self.lines[ind[0]])
+                self.seg_span.set_width(self.lines[ind[1]] - self.lines[ind[0]])
+        elif event.inaxes != self.axs[0]: 
             print("setting line", event.xdata)
             for cur_line in self.cursor_lines:
                 cur_line.set_xdata([event.xdata])
             self.fig.canvas.draw_idle() # Redraw the canvas efficiently
             return
-        # Remove previous span if exists to allow drawing a new one
-        # if self.current_span:
-        #     self.current_span.remove()
-        #     self.current_span = None
+
         self.start_x = event.xdata
-        # self.current_span = [
-        #     a.axvspan(event.xdata, event.xdata, **self.span_kwargs)
-        #     for i, a in enumerate(self.axs)
-        # ]
         for a in self.current_span:
             a.set_x(event.xdata)
             a.set_width(0)
