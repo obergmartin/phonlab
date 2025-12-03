@@ -3,7 +3,6 @@ __all__=['lpcresidual', 'overlap_add']
 import numpy as np
 from librosa import util, lpc
 from scipy.signal import windows, fftconvolve
-from tensorflow.signal import overlap_and_add
 
 from ..utils.prep_audio_ import prep_audio
 
