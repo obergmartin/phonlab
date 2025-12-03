@@ -22,7 +22,8 @@ dependencies = [
     'pandas',
     'librosa',
     'praat-parselmouth',
-    'scikit-learn'
+    'scikit-learn',
+    'tensorflow'
 ]
 classifiers = [
     'Programming Language :: Python :: 3',
