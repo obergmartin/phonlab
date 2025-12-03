@@ -5,7 +5,6 @@ from scipy.signal import windows, find_peaks, spectrogram, peak_prominences, fft
 from scipy import fft
 from librosa import feature, util, lpc
 from pandas import DataFrame
-from tensorflow.signal import overlap_and_add
 from scipy import linalg
 
 from ..utils.prep_audio_ import prep_audio
