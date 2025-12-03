@@ -229,6 +229,10 @@ class Viewer:
             # fig.canvas.draw()
         elif event.key == "ctrl+1":
             print(f"adding sement on tier 1 at {self.start_x=}")
+            pos = np.searchsorted(self.lines, self.start_x)
+            self.lines = np.insert(self.lines, pos, self.start_x)
+            self.tier_lines.set_segments(lines)
+            self.set_tier_labels(labels)
 
     def on_press(self, event):
         """Record the starting x-coordinate on button press."""
