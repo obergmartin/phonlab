@@ -11,6 +11,9 @@ import subprocess
 from .signal import loadsig
 from phonlab import prep_audio
 from phonlab import sgram
+from time import time
+import matplotlib.style as mplstyle
+mplstyle.use('fast')
 
 
 def df2lines(df):
@@ -22,8 +25,6 @@ def df2texobj(df):
         df[['t1','t2']].mean(axis=1),
         df.iloc[:, 2]
     )
-
-
 
 def make_linecollection(lines):
     lpts = [[(x,0), (x,1)] for x in lines]
@@ -119,7 +120,6 @@ class Viewer:
         self.tier_lines = make_linecollection(self.lines)
         self.axs[2].add_collection(self.tier_lines)
         for t, txt in df2texobj(df):
-            print(f"{t}", txt)
             self.axs[2].text(t, 0.5, txt, ha="center")
 
 
@@ -150,37 +150,47 @@ class Viewer:
         # this has problems because of seek position?
         subprocess.run(["ffplay", "-loglevel", "quiet", "-ss", f"{start_time}", "-t", f"{end_time}", "-nodisp", f"-autoexit", f"{self.fn}"])
 
-    def set_active_tier_boundary(self):
+    def set_active_tier_boundary(self, ind):
         """Click on a tier boundary to move it.
         """
         # clear selection line
-        pass
+        lw = np.ones(len(self.lines), dtype=int) *1
+        if ind >= 0:
+            lw[ind] = 4
+        self.tier_lines.set(linewidths=lw)
 
-    def set_active_tier_segment(self):
+    def set_active_tier_segment(self, ind):
         """Click in a tier segment to higlight it.
         """
         # clear selection line
-        # update play button boundaries
-        pass
+        # show tier selection
+        if ind >= 0:
+            self.seg_span.set_visible(True)
+            self.seg_span.set_x(self.lines[ind])
+            self.seg_span.set_width(self.lines[ind+1] - self.lines[ind])
+        else:
+            self.seg_span.set_visible(False)
 
-    def set_active_span(self):
+    def set_active_span(self, l, w, visible=True):
         """Update active span across all axes.
         """
-        # clear selection line
-        pass
+        # draw spans
+        for a in self.current_span:
+            a.set_visible(visible)
+            a.set_x(l)
+            a.set_width(w)
 
-    def set_active_line(self):
+    def set_active_line(self, p1):
         """Click on a signal to get value.
         Also allows adding/splitting segments.
         """
         # clear selection line
-        pass
+        for cur_line in self.cursor_lines:
+            cur_line.set_xdata([p1])
 
-    def resize_play_buttons(self):
+    def resize_play_buttons(self, s1, s2):
         l, b, w, h =  self.axs[self.n_rows-1].get_position().extents
         xsz = np.diff(self.axs[self.n_rows-1].get_xlim())[0]
-        s1 = self.current_span[0].get_x()
-        s2 = s1+self.current_span[0].get_width()
         p1 =  ((s1/xsz)* (w-l))
         p2 =  ((s2/xsz)* (w-l))
         w3 = (xsz-s2)/xsz * (w-l)
@@ -213,58 +223,68 @@ class Viewer:
         print('press', event.key)
         sys.stdout.flush()
         if event.key == 'x':
-            visible = xl.get_visible()
-            xl.set_visible(not visible)
-            fig.canvas.draw()
+            pass
+            # visible = xl.get_visible()
+            # xl.set_visible(not visible)
+            # fig.canvas.draw()
         elif event.key == "ctrl+1":
-            print("adding sement on tier 1")
+            print(f"adding sement on tier 1 at {self.start_x=}")
 
     def on_press(self, event):
         """Record the starting x-coordinate on button press."""
         # is click on existing:
-        # tier span
-        # span boundary
-        # signal
+        # tier axes
         if event.inaxes == self.axs[2]:
             ind = self.get_ind_under_point(event)
-            print(f"{ind=}")
+            # span boundary
             if isinstance(ind, int):
-                lw = np.ones(len(self.lines), dtype=int) *2
-                lw[ind] = 4
-                self.tier_lines.set(linewidths=lw)
+                p1 = self.lines[ind]
+                self.set_active_tier_boundary(ind)
+                self.set_active_line(event.xdata)
+                self.set_active_tier_segment(-1)
+                self.set_active_span(0, 0, False)
+                self.resize_play_buttons(p1, p1)
+            # tier span
             else:
-                print(f"{ind=}")
-                print(self.lines[ind[0]], self.lines[ind[1]])
+                p1, p2 = self.lines[ind[0]], self.lines[ind[1]]
                 # setspanhere
-                self.seg_span.set_x(self.lines[ind[0]])
-                self.seg_span.set_width(self.lines[ind[1]] - self.lines[ind[0]])
-        elif event.inaxes != self.axs[0]: 
-            print("setting line", event.xdata)
-            for cur_line in self.cursor_lines:
-                cur_line.set_xdata([event.xdata])
-            self.fig.canvas.draw_idle() # Redraw the canvas efficiently
-            return
-
-        self.start_x = event.xdata
-        for a in self.current_span:
-            a.set_x(event.xdata)
-            a.set_width(0)
+                self.set_active_tier_boundary(-1)
+                self.set_active_tier_segment(ind[0])
+                self.set_active_span(p1, p2-p1)
+                self.resize_play_buttons(p1, p2)
+        # sgram or signal
+        elif event.inaxes == self.axs[0] or event.inaxes == self.axs[1]: 
+            # print("setting line", event.xdata)
+            # clear span
+            self.set_active_tier_boundary(-1)
+            self.set_active_span(0, 0, False)
+            # draw selection line
+            self.set_active_line(event.xdata)
+            self.start_x = event.xdata
+            self.resize_play_buttons(event.xdata, event.xdata)
+        # for a in self.current_span:
+        #     a.set_x(event.xdata)
+        #     a.set_width(0)
         self.fig.canvas.draw_idle() # Redraw the canvas efficiently
 
     def on_motion(self, event):
         """Dynamically update the axvspan as the mouse moves (dragging)."""
-        if self.start_x is None or event.inaxes != self.axs[0]: return
+        # if:
+        # moving span
+        # moving edge/point
+        if self.start_x is None or event.inaxes != self.axs[0]:
+            return
 
         end_x = event.xdata
         # Draw the new temporary vertical span
-        # self.current_span = self.axs[0].axvspan(min(self.start_x, end_x), max(self.start_x, end_x), color='gray', alpha=0.5)
-        for a in self.current_span:
-            x = min(self.start_x, end_x)
-            w = abs(self.start_x - end_x)
-            a.set_x(x)
-            a.set_width(w)
-
-        self.resize_play_buttons()
+        x = min(self.start_x, end_x)
+        w = abs(self.start_x - end_x)
+        self.set_active_span(x, w)
+        s1 = self.current_span[0].get_x()
+        s2 = s1+self.current_span[0].get_width()
+        self.resize_play_buttons(s1, s2)
+        self.set_active_tier_segment(-1)
+        # self.fig.canvas.draw_idle() # Redraw the canvas efficiently
         self.fig.canvas.draw_idle() # Redraw the canvas efficiently
 
     def on_release(self, event):
