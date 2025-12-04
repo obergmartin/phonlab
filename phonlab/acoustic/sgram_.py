@@ -52,7 +52,6 @@ def compute_sgram(x,fs,w):
 def sgram(
     x,
     fs,
-    chan=0,
     start=0,
     end=-1,
     tf=8000,
@@ -176,7 +175,7 @@ def sgram(
     slice_width = 1.5  # how much space to give to the spectral slice
     cmap = plt.get_cmap(cmap)
     
-    # ----------- read and condition waveform -----------------------
+    # ----------- condition waveform -----------------------
     x2, fs = prep_audio(x,fs, target_fs = target_fs, pre = preemph,quiet=True)
 
     i1 = int(start * fs)   # index of starting time: seconds to samples
@@ -205,6 +204,8 @@ def sgram(
             fig = plt.figure(figsize=(figwidth, figheight),dpi=72)
             ax1 = fig.add_subplot(111)
     else:
+        fig = plt.gcf()  # get the current figure
+        fig.set_size_inches(figwidth, figheight) # resize it by the values here
         ax1 = ax
 
     vmin = np.min(Sxx) + (np.max(Sxx)-np.min(Sxx))*min_prop
@@ -227,7 +228,6 @@ def sgram(
         ax2.grid(which='major', axis='y', linestyle=':')  # add grid lines
         ax2.set_ymargin(0)    # put y-axis at bottom and top of axis (as in spectrogram)
         ax2.tick_params(labelleft=False,labelsize=font_size)  # do not write the frequency axis labels
-    
     
     if len(save_name)>0:
         print(f'Saving file: {save_name}')
