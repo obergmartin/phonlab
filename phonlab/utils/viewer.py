@@ -2,6 +2,7 @@ __all__=['Viewer']
 
 import sys
 import numpy as np
+import scipy as sp
 import matplotlib.pyplot as plt
 from matplotlib.backend_bases import MouseButton
 from matplotlib.widgets import Button
@@ -44,8 +45,10 @@ class Viewer:
 
         self.fn = fn
         wavdata, fs = loadsig(fn, chansel=[0])  # taking just the left channel, with 'chansel'
-        self.axs[0].plot(np.arange(0, wavdata.size)/fs, wavdata, c='k')
-        self.axs[0].set_xlim([0,wavdata.size/fs])
+        decim = 10
+        x = sp.signal.decimate(wavdata, decim)
+        self.axs[0].plot(np.arange(0, x.size)/(fs/decim), x, c='k')
+        self.axs[0].set_xlim([0, wavdata.size/fs])
         sgram(wavdata, fs, tf=8000, ax=self.axs[1])
         plt.subplots_adjust(left=0.1, bottom=0.1, right=0.9, top=0.9, wspace=0, hspace=0)
 
