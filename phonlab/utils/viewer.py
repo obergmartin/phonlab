@@ -113,6 +113,8 @@ class Viewer:
         ]
         # selected tier segment
         self.seg_span = self.axs[2].axvspan(-2,-1, **self.seg_span_kwargs)
+        self.set_active_span(0,1,visible=False)
+        self.set_active_tier_segment(-1)
         # format lims for tier axes
         self.axs[2].get_yaxis().set_visible(False)
         self.axs[2].get_yaxis().set_ticks([])
