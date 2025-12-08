@@ -106,6 +106,7 @@ class Viewer:
             for i, a in enumerate(self.axs)
             if i in self.line_axs
         ]
+        self.set_active_line(0, visible=False)
         # collection of handles for selection span on axes
         self.current_span = [
             a.axvspan(1, 2, **self.span_kwargs)
@@ -150,16 +151,17 @@ class Viewer:
             end_time = xlims[1]
         else:
             return
-        print(f"{start_time=}")
-        print(f"{end_time=}")
+        # print(f"{start_time=}")
+        # print(f"{end_time=}")
         # this has problems because of seek position?
         subprocess.run(["ffplay", "-loglevel", "quiet", "-ss", f"{start_time}", "-t", f"{end_time}", "-nodisp", f"-autoexit", f"{self.fn}"])
 
     def set_active_tier_boundary(self, ind):
         """Click on a tier boundary to move it.
         """
-        # clear selection line
-        lw = np.ones(len(self.lines), dtype=int) *1
+        # set all segments to width=1
+        lw = np.ones(len(self.lines), dtype=int) * 1
+        # set selected segment style
         if ind >= 0:
             lw[ind] = 4
         self.tier_lines.set(linewidths=lw)
@@ -185,12 +187,13 @@ class Viewer:
             a.set_x(l)
             a.set_width(w)
 
-    def set_active_line(self, p1):
+    def set_active_line(self, p1, visible=True):
         """Click on a signal to get value.
         Also allows adding/splitting segments.
         """
         # clear selection line
         for cur_line in self.cursor_lines:
+            cur_line.set(visible=visible)
             cur_line.set_xdata([p1])
 
     def resize_play_buttons(self, s1, s2):
