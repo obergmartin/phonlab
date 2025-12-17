@@ -9,6 +9,7 @@ print(phon.__name__,phon.__version__)
 fn = "./phonlab/data/example_audio/im_twelve.wav"
 df = phonlab.tg_to_df("./phonlab/data/example_audio/im_twelve.TextGrid")
 
-import phonlab
-v = phonlab.Viewer(fn, df[0:2])
+v = phon.Viewer(fn, df[0:2])
+# edited dataframes are here:
+v.df
 # %%
