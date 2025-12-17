@@ -9,7 +9,7 @@ from matplotlib.patches import Rectangle
 from matplotlib.collections import LineCollection
 from matplotlib.gridspec import GridSpec
 import subprocess
-from phonlab import loadsig
+from .signal import loadsig
 from phonlab import prep_audio
 from phonlab import sgram
 from time import time
@@ -284,16 +284,27 @@ class Viewer:
         """
         self.epsilon = 0.05  # now in s...in n_pixels, make dependant on zoom level?
 
+        # eventxt = self.tier_axs[tier_ind].get_transform().inverted().transform((event.x,event.y))
         eventtime = self.tier_axs[tier_ind].transData.inverted().transform((event.x, event.y))[0]
+        # fix below here to get dst in time coords
+        # xy = [(x,0) for x in self.tier_lines[tier_ind]] # from collection
+        # in time (x-axis) units
         xyt = np.array([ln.get_xdata()[0] for ln in self.tier_lines[tier_ind]])
+        xyt
+        # xyt = self.tier_axs[tier_ind].get_transform().transform(xy)  # to display coords
+        # xyt
+        # breakpoint()
         dst = xyt - eventtime
+        dst
+        print(f"{dst=}")
         ind = int(abs(dst).argmin())
+        dst[ind]
         if abs(dst[ind]) < self.epsilon:
-            # print(f"found segment", ind)
+            print(f"found segment", ind)
             return ind
         else:
             ind =  np.searchsorted([x for x in xyt], eventtime)
-            # print(f"found span", (ind-1, ind))
+            print(f"found span", (ind-1, ind))
             return (ind-1, ind)
 
     ## event callbacks
@@ -448,7 +459,7 @@ class Viewer:
             df = pd.DataFrame(d)
             ts.append(df)
 
-        self.df = ts
+        self.df_ = ts
 
 
 
