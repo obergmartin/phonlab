@@ -3,6 +3,31 @@ import numpy as np
 import srt
 from parselmouth.praat import call as pcall
 
+
+@pd.api.extensions.register_dataframe_accessor("phon")
+class PhonlabDataFrame:
+    def __init__(self, pandas_obj):
+        self._obj = pandas_obj
+
+    def add_row(self, t, lab=""):
+        """Adds a row to a DataFrame.
+
+        Ensures time limits are respected.
+
+        Maybe return copy instead?
+        """
+        assert t > self._obj.t1.iloc[0], "Cannot insert at index=0, edit label instead"
+        assert t < self._obj.t2.iloc[-1], "Cannot insert at end of DataFrame, edit label instead"
+        ind = self._obj.t1.to_numpy().searchsorted(t)
+        new_row = pd.DataFrame([{"t1":t, "t2":self._obj.t1[ind], self._obj.columns[-1]:lab}])
+        self._obj.t2[ind-1] = t
+        self._obj = pd.concat([
+            self._obj.iloc[:ind, :],
+            new_row,
+            self._obj.iloc[ind:, :],
+        ])
+
+
 def _df_to_praat_short_label_str(df, lblcol, t1col, t2col=None, fmt=None):
     """
     Return a string representing the labels of a tier in praat_short format
