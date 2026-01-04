@@ -54,6 +54,7 @@ __all__ = [
     "split_speaker_df",
     "loadsig",
     "Viewer",
+    "Sound",
 ]
 
 from .acoustic.DPPT import track_formants_DPPT
@@ -87,4 +88,5 @@ from .utils.tidy import df_to_tg, tg_to_df, add_context, merge_tiers, adjust_bou
 from .utils.signal import loadsig
 
 from .viz.viewer import Viewer
+from .viz.viewerqt2 import Sound
 
