@@ -11,6 +11,7 @@ matplotlib.use("Agg")
 from PySide6 import QtCore, QtWidgets
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
+from matplotlib.gridspec import GridSpec
 
 # ------------------------------------------------------------
 # Single canvas with two shared-x axes
@@ -22,12 +23,20 @@ class WaveformCanvas(FigureCanvas):
         self.setParent(parent)
 
         self.axs = self.init_axes(n_tiers)
-        self.ax_wave = self.fig.add_subplot(211)
-        self.ax_lines = self.fig.add_subplot(212, sharex=self.ax_wave)
+        # self.ax_wave = self.fig.add_subplot(211)
+        # self.ax_lines = self.fig.add_subplot(212, sharex=self.ax_wave)
+        self.ax_wave = self.axs[0]
+        self.ax_sgram = self.axs[1]
+        self.axs_tiers = self.axs[2:-1]
+        self.ax_button = self.axs[-1]
 
-        self.ax_wave.set_autoscale_on(False)
-        self.ax_lines.set_autoscale_on(False)
-        self.ax_lines.set_yticks([])
+        for ax in self.axs:
+            ax.set_autoscale_on(False)
+        # TODO: should work here, but needed in plot_waveform?
+        for ax in self.axs_tiers:
+            ax.set_yticks([])
+            ax.set_xticks([])
+        self.ax_button.set_yticks([])
 
         self.wave_data = None
         self.boundary_lines = []
@@ -54,6 +63,7 @@ class WaveformCanvas(FigureCanvas):
         n_rows = 3 + n_tiers
         height_ratios = [waveform_h, sgram_h] + [tier_h]*n_tiers + [button_h]
 
+        # TODO: remove hspace
         gs = GridSpec(n_rows, 1, figure=self.fig, height_ratios=height_ratios)
         axs = [self.fig.add_subplot(gs[x]) for x in range(n_rows)]
         for i in range(1, n_rows):
@@ -69,18 +79,23 @@ class WaveformCanvas(FigureCanvas):
         x = np.arange(len(data)) / fs
 
         self.ax_wave.clear()
-        self.ax_lines.clear()
-        self.ax_lines.set_yticks([])
+        for ax in self.axs_tiers:
+            ax.clear()
+            ax.set_yticks([])
+            ax.set_xticks([])
+            ax.set_ylim(0, 1)
 
         self.ax_wave.plot(x, data, linewidth=0.8, antialiased=False)
         self.ax_wave.set_ylim(np.min(data), np.max(data))
-        self.ax_lines.set_ylim(0, 1)
 
         self.boundary_lines.clear()
         self.temp_wave = None
         self.temp_lines = None
 
         self.draw_idle()
+
+    def plot_tier(self, ax, df):
+        for data in self.
 
     def commit_span_as_boundaries(self):
         if self.span_start is None or self.span_end is None:
@@ -99,7 +114,7 @@ class WaveformCanvas(FigureCanvas):
             self.temp_wave = self.ax_wave.axvline(
                 x, color="g", linestyle="--", linewidth=1, antialiased=False
             )
-            self.temp_lines = self.ax_lines.axvline(
+            self.temp_lines = self.axs_tiers.axvline(
                 x, color="g", linestyle="--", linewidth=1, antialiased=False
             )
         else:
@@ -145,7 +160,7 @@ class WaveformCanvas(FigureCanvas):
     # Boundary lines
     # --------------------------------------------------------
     def add_boundary(self, x):
-        ln = self.ax_lines.axvline(x, color="r", linewidth=1, antialiased=False)
+        ln = self.axs_tiers.axvline(x, color="r", linewidth=1, antialiased=False)
         self.boundary_lines.append(ln)
         self.clear_temp_line()
         self.draw_idle()
@@ -154,7 +169,7 @@ class WaveformCanvas(FigureCanvas):
     # Event handlers
     # --------------------------------------------------------
     def on_motion(self, event):
-        if event.inaxes not in (self.ax_wave, self.ax_lines):
+        if event.inaxes not in (self.ax_wave, self.axs_tiers):
             return
         if event.xdata is None:
             return
@@ -170,7 +185,7 @@ class WaveformCanvas(FigureCanvas):
             self.update_span(self.span_start, self.span_end)
 
         # Drag existing boundary line
-        if self.selected_line and event.inaxes == self.ax_lines:
+        if self.selected_line and event.inaxes == self.axs_tiers:
             self.selected_line.set_xdata([x, x])
             self.draw_idle()
 
@@ -180,7 +195,7 @@ class WaveformCanvas(FigureCanvas):
             self.span_end = event.xdata
             self.update_span(self.span_start, self.span_end)
 
-        elif event.inaxes == self.ax_lines and event.xdata is not None:
+        elif event.inaxes == self.axs_tiers and event.xdata is not None:
             for ln in self.boundary_lines:
                 if abs(event.xdata - ln.get_xdata()[0]) < 0.5:
                     self.selected_line = ln
