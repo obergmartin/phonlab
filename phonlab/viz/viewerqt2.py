@@ -229,7 +229,7 @@ class MainWindow(QtWidgets.QWidget):
 
         layout = QtWidgets.QVBoxLayout(self)
 
-        self.canvas = WaveformCanvas(self, n_tiers=n_tiers)
+        self.canvas = WaveformCanvas(n_tiers=n_tiers)
         layout.addWidget(self.canvas)
 
         self.textbox = QtWidgets.QLineEdit()
@@ -265,12 +265,19 @@ class MainWindow(QtWidgets.QWidget):
         self.fs = fs
         self.signal_length = data.size/fs
         # print(f"{self.signal_length=}")
-        self.canvas.plot_waveform(data, self.fs, dfs)
+        # self.canvas.plot_waveform(data, self.fs, dfs)
+        self.canvas.plot_waveform(data, fs)
+        for i, df in enumerate(dfs):
+            self.canvas.plot_tier(i, df)
         self.data_length = len(data)
 
         max_pos = max(0, self.data_length - self.window_size)
-        self.scrollbar.setRange(0, max_pos)
-        self.scrollbar.setPageStep(self.window_size)
+        page_step = 500
+        max_pos = 2000 - page_step
+        # self.scrollbar.setRange(0, max_pos)
+        self.scrollbar.setMinimum(0)
+        self.scrollbar.setMaximum(max_pos)
+        self.scrollbar.setPageStep(page_step)
         self.scrollbar.setValue(0)
 
         self.set_xlim(0)
@@ -279,8 +286,10 @@ class MainWindow(QtWidgets.QWidget):
     # X-range handling (single shared-x call)
     # --------------------------------------------------------
     def set_xlim(self, left):
-        left = max(0.1, min(left, self.data_length - self.window_size))
+        left = left / 1000
+        left = max(0, min(left, self.data_length - self.window_size))
         right = left + self.window_size
+        right = right/1000
         print(left, right)
         self.canvas.ax_wave.set_xlim(left, right)
         self.canvas.draw_idle()
@@ -307,12 +316,13 @@ class MainWindow(QtWidgets.QWidget):
     # --------------------------------------------------------
     def on_zoom(self, center_x, step):
         factor = 0.9 if step > 0 else 1.1
-        new_size = (self.window_size * factor)
+        print(f"{self.window_size=}")
+        new_size = int(self.window_size * factor)
         # new_size = max(self.window_size, min(new_size, self.data_length))
         if new_size > self.signal_length:
-            new_size = self.signal_length
+            new_size = int(self.signal_length*1000)
         if new_size < 0.001:
-            new_size = 0.0001
+            new_size = 0.001
         print(f"{new_size=}")
         self.window_size = new_size
 
@@ -322,7 +332,7 @@ class MainWindow(QtWidgets.QWidget):
         self.scrollbar.setRange(0, max(0, new_size))
         self.scrollbar.setValue(left)
         self.set_xlim(left)
-        breakpoint()
+        # breakpoint()
 
     # --------------------------------------------------------
     # Boundary creation
@@ -387,10 +397,11 @@ class Sound:
     def __init__(self, fn, tg=True):
         tfn = fn.replace(".wav", ".TextGrid")
         wav, fs = phon.loadsig(fn)
-        dfs = phon.tg_to_df(tfn)
+        dfs = phon.tg_to_df(tfn)[:2]
         self.wav = wav
         self.fs = fs
         self.tiers = [Tier(df) for df in dfs]
+        print(self.tiers)
 
     def __repr__(self):
         return f"Sound ({self.wav.size/self.fs}s) with {len(self.tiers)} tiers"
@@ -400,14 +411,16 @@ class Sound:
             app = QtWidgets.QApplication(sys.argv)
         else:
             app = QtWidgets.QApplication.instance()
-        w = MainWindow(window_size=self.wav.size / self.fs, n_tiers=2)
+        # w = MainWindow(window_size=self.wav.size / self.fs, n_tiers=2)
+        ws = self.wav.size/self.fs*1000
+        w = MainWindow(window_size=ws, n_tiers=2)
 
         # t = np.linspace(0, 10, 2000)
         # data = np.sin(2 * np.pi * 3 * t) + 0.15 * np.random.randn(len(t))
         self.tiers_ = ["foo"]
 
-        w.init_app(self.wav, self.fs)
-        w.resize(1000, 700)
+        w.init_app(self.wav, self.fs, self.tiers)
+        # w.resize(1000, 700)
         w.show()
         sys.exit(app.exec())
         app.close()
